@@ -1,0 +1,39 @@
+[
+  { "day": "MONDAY", "startTime": "09:30", "endTime": "10:30", "subject": "Data Structures & Algorithms", "subjectCode": "CS301", "room": "LH-101", "faculty": "Dr. R. K. Sharma", "type": "THEORY" },
+  { "day": "MONDAY", "startTime": "10:30", "endTime": "11:30", "subject": "Object Oriented Programming", "subjectCode": "CS302", "room": "LH-101", "faculty": "Prof. S. Patil", "type": "THEORY" },
+  { "day": "MONDAY", "startTime": "11:30", "endTime": "12:30", "subject": "Discrete Mathematics", "subjectCode": "CS303", "room": "LH-101", "faculty": "Dr. M. Joshi", "type": "THEORY" },
+  { "day": "MONDAY", "startTime": "12:30", "endTime": "13:15", "subject": "Lunch Break", "subjectCode": "LUNCH", "room": "Cafeteria", "type": "BREAK" },
+  { "day": "MONDAY", "startTime": "13:15", "endTime": "15:15", "subject": "Data Structures Lab (B1/B2)", "subjectCode": "CS301P", "room": "Lab 3", "faculty": "Dr. R. K. Sharma", "type": "PRACTICAL" },
+  { "day": "MONDAY", "startTime": "15:15", "endTime": "16:15", "subject": "Free Period / Library", "subjectCode": "FREE", "room": "Library", "type": "FREE" },
+
+  { "day": "TUESDAY", "startTime": "09:30", "endTime": "10:30", "subject": "Digital Logic & Computer Architecture", "subjectCode": "CS304", "room": "LH-101", "faculty": "Prof. A. Deshmukh", "type": "THEORY" },
+  { "day": "TUESDAY", "startTime": "10:30", "endTime": "11:30", "subject": "Data Structures & Algorithms", "subjectCode": "CS301", "room": "LH-101", "faculty": "Dr. R. K. Sharma", "type": "THEORY" },
+  { "day": "TUESDAY", "startTime": "11:30", "endTime": "12:30", "subject": "Artificial Intelligence Basics", "subjectCode": "AI301", "room": "LH-101", "faculty": "Dr. P. Wankhede", "type": "THEORY" },
+  { "day": "TUESDAY", "startTime": "12:30", "endTime": "13:15", "subject": "Lunch Break", "subjectCode": "LUNCH", "room": "Cafeteria", "type": "BREAK" },
+  { "day": "TUESDAY", "startTime": "13:15", "endTime": "15:15", "subject": "OOP with Java Lab (B1/B2)", "subjectCode": "CS302P", "room": "Lab 4", "faculty": "Prof. S. Patil", "type": "PRACTICAL" },
+  { "day": "TUESDAY", "startTime": "15:15", "endTime": "16:15", "subject": "Constitution of India", "subjectCode": "HS301", "room": "LH-101", "faculty": "Prof. V. Gupta", "type": "THEORY" },
+
+  { "day": "WEDNESDAY", "startTime": "09:30", "endTime": "10:30", "subject": "Discrete Mathematics", "subjectCode": "CS303", "room": "LH-101", "faculty": "Dr. M. Joshi", "type": "THEORY" },
+  { "day": "WEDNESDAY", "startTime": "10:30", "endTime": "11:30", "subject": "Digital Logic & Computer Architecture", "subjectCode": "CS304", "room": "LH-101", "faculty": "Prof. A. Deshmukh", "type": "THEORY" },
+  { "day": "WEDNESDAY", "startTime": "11:30", "endTime": "12:30", "subject": "Artificial Intelligence Basics", "subjectCode": "AI301", "room": "LH-101", "faculty": "Dr. P. Wankhede", "type": "THEORY" },
+  { "day": "WEDNESDAY", "startTime": "12:30", "endTime": "13:15", "subject": "Lunch Break", "subjectCode": "LUNCH", "room": "Cafeteria", "type": "BREAK" },
+  { "day": "WEDNESDAY", "startTime": "13:15", "endTime": "15:15", "subject": "AI Python Programming Lab", "subjectCode": "AI301P", "room": "AI Lab", "faculty": "Dr. P. Wankhede", "type": "PRACTICAL" },
+  { "day": "WEDNESDAY", "startTime": "15:15", "endTime": "16:15", "subject": "Free Period / Mentoring", "subjectCode": "FREE", "room": "LH-101", "type": "FREE" },
+
+  { "day": "THURSDAY", "startTime": "09:30", "endTime": "10:30", "subject": "Object Oriented Programming", "subjectCode": "CS302", "room": "LH-101", "faculty": "Prof. S. Patil", "type": "THEORY" },
+  { "day": "THURSDAY", "startTime": "10:30", "endTime": "11:30", "subject": "Discrete Mathematics", "subjectCode": "CS303", "room": "LH-101", "faculty": "Dr. M. Joshi", "type": "THEORY" },
+  { "day": "THURSDAY", "startTime": "11:30", "endTime": "12:30", "subject": "Data Structures & Algorithms", "subjectCode": "CS301", "room": "LH-101", "faculty": "Dr. R. K. Sharma", "type": "THEORY" },
+  { "day": "THURSDAY", "startTime": "12:30", "endTime": "13:15", "subject": "Lunch Break", "subjectCode": "LUNCH", "room": "Cafeteria", "type": "BREAK" },
+  { "day": "THURSDAY", "startTime": "13:15", "endTime": "14:15", "subject": "Digital Logic & Computer Architecture", "subjectCode": "CS304", "room": "LH-101", "faculty": "Prof. A. Deshmukh", "type": "THEORY" },
+  { "day": "THURSDAY", "startTime": "14:15", "endTime": "16:15", "subject": "Hardware / Digital Logic Lab", "subjectCode": "CS304P", "room": "Hardware Lab", "faculty": "Prof. A. Deshmukh", "type": "PRACTICAL" },
+
+  { "day": "FRIDAY", "startTime": "09:30", "endTime": "10:30", "subject": "Artificial Intelligence Basics", "subjectCode": "AI301", "room": "LH-101", "faculty": "Dr. P. Wankhede", "type": "THEORY" },
+  { "day": "FRIDAY", "startTime": "10:30", "endTime": "11:30", "subject": "Object Oriented Programming", "subjectCode": "CS302", "room": "LH-101", "faculty": "Prof. S. Patil", "type": "THEORY" },
+  { "day": "FRIDAY", "startTime": "11:30", "endTime": "12:30", "subject": "Constitution of India", "subjectCode": "HS301", "room": "LH-101", "faculty": "Prof. V. Gupta", "type": "THEORY" },
+  { "day": "FRIDAY", "startTime": "12:30", "endTime": "13:15", "subject": "Lunch Break", "subjectCode": "LUNCH", "room": "Cafeteria", "type": "BREAK" },
+  { "day": "FRIDAY", "startTime": "13:15", "endTime": "15:15", "subject": "Mini Project / Hackathon Lab", "subjectCode": "PR301", "room": "Project Lab", "faculty": "Faculty Team", "type": "PRACTICAL" },
+  { "day": "FRIDAY", "startTime": "15:15", "endTime": "16:15", "subject": "Free Period / Sports", "subjectCode": "FREE", "room": "Ground", "type": "FREE" },
+
+  { "day": "SATURDAY", "startTime": "09:30", "endTime": "11:30", "subject": "Remedial Classes / Technical Club", "subjectCode": "CLUB301", "room": "Auditorium", "faculty": "Guest Lecturers", "type": "THEORY" },
+  { "day": "SATURDAY", "startTime": "11:30", "endTime": "13:30", "subject": "Coding Competition & Project Review", "subjectCode": "REV301", "room": "Computer Center", "faculty": "Dept Faculty", "type": "PRACTICAL" }
+]

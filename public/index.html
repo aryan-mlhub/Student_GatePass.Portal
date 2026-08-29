@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SBJITMR Campus Gate Pass System</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f5ff',
+              100: '#e0ecff',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              800: '#1e3a8a',
+              900: '#172554',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Libraries: QRCode & HTML5 QR Scanner -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    /* Single Large Central Rotating Logo Watermark */
+    body {
+      position: relative;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    @keyframes smoothWatermarkSpin {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: min(580px, 78vw);
+      height: min(580px, 78vw);
+      z-index: 0;
+      pointer-events: none;
+      background-image: url("assets/logo.png");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      opacity: 0.055;
+      filter: grayscale(40%);
+      animation: smoothWatermarkSpin 45s linear infinite;
+      transform-origin: center center;
+      will-change: transform;
+    }
+
+    header,
+    main,
+    footer,
+    #intro-screen,
+    .modal-backdrop {
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+
+<body
+  class="bg-slate-50 text-slate-800 antialiased font-sans min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+  <!-- ========================================================================= -->
+  <!-- 1. INTRO SPLASH SCREEN -->
+  <!-- ========================================================================= -->
+  <!-- INTRO SPLASH SCREEN -->
+  <div id="intro-screen"
+    style="position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; background: #ffffff; z-index: 99999; display: flex; align-items: center; justify-content: center; overflow: hidden; transition: opacity 0.6s ease, visibility 0.6s ease;">
+    <video id="intro-video" autoplay muted playsinline webkit-playsinline preload="auto"
+      style="width: 100%; height: 100%; max-width: 100vw; max-height: 100dvh; object-fit: contain; background: #ffffff;">
+      <source src="assets/gatepass2.0.mp4" type="video/mp4" />
+      <source src="/assets/gatepass2.0.mp4" type="video/mp4" />
+      <source src="assets/gatepass-intro.mp4" type="video/mp4" />
+      <source src="/assets/gatepass-intro.mp4" type="video/mp4" />
+      <source src="assets/make_this_d_pic_to_the_d_vid.mp4" type="video/mp4" />
+      Your browser does not support the video tag.
+    </video>
+    <button onclick="finishIntro()"
+      style="position: absolute; bottom: 30px; right: 30px; background: rgba(27, 42, 74, 0.88); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 99px; font-size: 14px; font-weight: 600; cursor: pointer; z-index: 100000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">Skip
+      Intro ✕</button>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 2. APPLICATION HEADER / TOPBAR -->
+  <!-- ========================================================================= -->
+  <header id="main-header" class="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <div
+          class="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white shadow-sm font-bold text-lg">
+          GP
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-900 tracking-tight text-base sm:text-lg">SBJITMR GATEPASS</span>
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Live AY 26-27
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 hidden sm:block">Timetable-Aware Campus Gate Pass Engine</p>
+        </div>
+      </div>
+
+      <!-- Navigation & User Profile -->
+      <div class="flex items-center gap-3">
+
+        <!-- Live Clock Pill -->
+        <div
+          class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-600">
+          <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="live-clock">--:--:--</span>
+          <span class="text-slate-400">|</span>
+          <span id="live-day" class="uppercase font-semibold text-slate-700">TODAY</span>
+        </div>
+
+        <!-- Auth / Profile Area -->
+        <div id="nav-auth-area" class="flex items-center gap-2">
+          <!-- Populated by JS -->
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 3. MAIN APP VIEW CONTAINER -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ======================================================================= -->
+    <!-- VIEW A: AUTHENTICATION (Sign In & Sign Up Toggle) -->
+    <!-- ======================================================================= -->
+    <section id="view-auth" class="max-w-md mx-auto my-8">
+
+      <!-- Card Container -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+        <!-- Auth Header -->
+        <div class="p-6 border-b border-slate-100 text-center bg-gradient-to-b from-slate-50 to-white">
+          <div
+            class="inline-flex h-12 w-12 rounded-xl bg-brand-50 border border-brand-100 text-brand-600 items-center justify-center font-bold text-xl mb-3 shadow-inner">
+            <img src="/assets/logo.png" alt="" height="15px" width="15px">
+          </div>
+          <h2 class="text-xl font-bold text-slate-900">Campus Access Portal</h2>
+          <p class="text-xs text-slate-500 mt-1">S.B. Jain Institute of Technology, Management & Research</p>
+
+          <!-- Tab Switcher -->
+          <div class="mt-5 grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-semibold">
+            <button id="tab-btn-signin" onclick="switchAuthTab('signin')"
+              class="py-2 rounded-lg transition-all bg-white text-slate-900 shadow-sm">
+              Sign In
+            </button>
+            <button id="tab-btn-signup" onclick="switchAuthTab('signup')"
+              class="py-2 rounded-lg transition-all text-slate-500 hover:text-slate-900">
+              Student Sign Up
+            </button>
+          </div>
+        </div>
+
+        <!-- Form 1: Sign In -->
+        <div id="form-signin-container" class="p-6 space-y-4">
+
+          <!-- Role selector pills -->
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Select Your
+              Role</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="selectLoginRole('STUDENT')" id="role-pill-STUDENT"
+                class="role-pill border border-brand-600 bg-brand-50 text-brand-700 py-2 px-3 rounded-lg text-xs font-semibold flex flex-col items-center gap-1 transition-all">
+                <span>🎓</span>
+                <span>Student</span>
+              </button>
+              <button type="button" onclick="selectLoginRole('MENTOR')" id="role-pill-MENTOR"
+                class="role-pill border border-slate-200 bg-white text-slate-600 py-2 px-3 rounded-lg text-xs font-semibold flex flex-col items-center gap-1 hover:border-slate-300 transition-all">
+                <span>👔</span>
+                <span>Mentor/HOD</span>
+              </button>
+              <button type="button" onclick="selectLoginRole('GUARD')" id="role-pill-GUARD"
+                class="role-pill border border-slate-200 bg-white text-slate-600 py-2 px-3 rounded-lg text-xs font-semibold flex flex-col items-center gap-1 hover:border-slate-300 transition-all">
+                <span>🛡️</span>
+                <span>Security</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Identifier -->
+          <div>
+            <label id="lbl-identifier" class="block text-xs font-medium text-slate-700 mb-1">Student Roll No /
+              USN</label>
+            <input type="text" id="login-identifier" value="CM25001" placeholder="e.g. CM25001 or SBJ23CSE001"
+              class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-mono" />
+          </div>
+
+          <!-- Password -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-medium text-slate-700">Password</label>
+              <span class="text-[11px] text-slate-400">Default: student123 / admin123</span>
+            </div>
+            <input type="password" id="login-password" value="student123" placeholder="••••••••"
+              class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500" />
+          </div>
+
+          <!-- Submit Button -->
+          <button type="button" onclick="handleLoginSubmit()"
+            class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg text-sm shadow-sm transition-all flex items-center justify-center gap-2 mt-2">
+            <span>Sign In to Portal</span>
+            <span>→</span>
+          </button>
+
+          <!-- Fast Demo Login Buttons -->
+          <div class="pt-3 border-t border-slate-100">
+            <span
+              class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 text-center">1-Click
+              Demo Logins</span>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button onclick="quickDemoLogin('STUDENT', 'CM25001', 'student123')"
+                class="p-2 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-left font-medium text-slate-700">
+                🎓 Student <span class="text-slate-400 block font-mono text-[10px]">CM25001 (Aaditya)</span>
+              </button>
+              <button onclick="quickDemoLogin('MENTOR', 'warden@gateguard.demo', 'warden123')"
+                class="p-2 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-left font-medium text-slate-700">
+                👔 Mentor/HOD <span class="text-slate-400 block font-mono text-[10px]">CSE Dept Head</span>
+              </button>
+              <button onclick="quickDemoLogin('GUARD', 'guard@gateguard.demo', 'guard123')"
+                class="p-2 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-left font-medium text-slate-700">
+                🛡️ Main Guard <span class="text-slate-400 block font-mono text-[10px]">Campus Gate 1</span>
+              </button>
+              <button onclick="quickDemoLogin('ADMIN', 'admin@gateguard.demo', 'admin123')"
+                class="p-2 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 text-left font-medium text-slate-700">
+                ⚡ Administrator <span class="text-slate-400 block font-mono text-[10px]">System Admin</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Form 2: Student Sign Up -->
+        <div id="form-signup-container" class="p-6 space-y-4 hidden">
+
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
+            <input type="text" id="signup-name" placeholder="Aaditya Sharma"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">USN / Roll No.</label>
+              <input type="text" id="signup-usn" placeholder="CM25001"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono uppercase focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Department</label>
+              <select id="signup-dept"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                <option value="CSE (AI&ML)">CSE (AI&ML)</option>
+                <option value="Computer Science & Engg">Computer Science & Engg</option>
+                <option value="Information Technology">Information Technology</option>
+                <option value="Electronics & Comm">Electronics & Comm</option>
+                <option value="Mechanical Engg">Mechanical Engg</option>
+                <option value="Civil Engg">Civil Engg</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Semester</label>
+              <select id="signup-sem"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                <option value="3">3rd Semester</option>
+                <option value="4">4th Semester</option>
+                <option value="5">5th Semester</option>
+                <option value="6">6th Semester</option>
+                <option value="7">7th Semester</option>
+                <option value="8">8th Semester</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Section</label>
+              <select id="signup-sec"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                <option value="B">Section B</option>
+                <option value="A">Section A</option>
+                <option value="C">Section C</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Parent's Phone Number (for SMS Alert)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-mono">+91</span>
+              <input type="tel" id="signup-parent-phone" placeholder="9876543210" maxlength="10"
+                class="w-full pl-12 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Create Password</label>
+            <input type="password" id="signup-password" placeholder="••••••••"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+
+          <button type="button" onclick="handleSignupSubmit()"
+            class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-sm shadow-sm transition-all flex items-center justify-center gap-2">
+            <span>Complete Registration</span>
+            <span>✓</span>
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ======================================================================= -->
+    <!-- VIEW B: STUDENT DASHBOARD & PASS REQUEST -->
+    <!-- ======================================================================= -->
+    <section id="view-student" class="space-y-6 hidden">
+
+      <!-- Student Top Header Banner -->
+      <div
+        class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-brand-600">Student Portal</span>
+            <span class="text-slate-300">•</span>
+            <span id="student-header-dept" class="text-xs font-medium text-slate-500">CSE (AI&ML) · Sem 3 · Sec B</span>
+          </div>
+          <h1 id="student-header-name" class="text-2xl font-bold text-slate-900 mt-1">Aaditya Sharma</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Roll No: <span id="student-header-usn"
+              class="font-mono font-semibold text-slate-700">CM25001</span> · Parent SMS: <span
+              id="student-header-parent" class="font-mono text-slate-700">+91 9876525001</span></p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="openNewPassModal()"
+            class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-all flex items-center gap-2">
+            <span>+ Request Gate Pass</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid: Left (Live Timetable Status) | Right (Pass Status & Active QR) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left 1/3: Live Timetable Intelligence Card -->
+        <div class="lg:col-span-1 space-y-6">
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Live Academic Slot
+              </h3>
+              <span id="tt-day-badge"
+                class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">MONDAY</span>
+            </div>
+
+            <div class="mt-4 space-y-3">
+              <div class="p-3.5 rounded-xl bg-brand-50 border border-brand-100">
+                <span class="text-[10px] font-semibold uppercase tracking-wider text-brand-600 block mb-0.5">Current
+                  Schedule</span>
+                <div id="tt-subject-name" class="font-bold text-slate-900 text-base">Database Management Systems</div>
+                <div class="flex items-center justify-between text-xs text-slate-600 mt-1 font-mono">
+                  <span id="tt-subject-time">11:15 AM - 12:15 PM</span>
+                  <span id="tt-subject-faculty" class="font-sans font-medium text-brand-700">Dr. M. Khan</span>
+                </div>
+              </div>
+
+              <!-- Automated Pass Routing Rule Badge -->
+              <div id="tt-routing-box" class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                <span class="font-semibold text-slate-700 block mb-1">Pass Routing Policy:</span>
+                <p id="tt-routing-desc" class="text-slate-600 leading-relaxed text-[11px]">
+                  During active lecture hours, passes require <strong class="text-slate-900">Mentor
+                    verification</strong> followed by <strong class="text-slate-900">HOD authorization</strong>.
+                </p>
+              </div>
+
+              <!-- Today's Schedule Overview -->
+              <div>
+                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">Today's Class
+                  Schedule</span>
+                <div id="student-day-schedule" class="space-y-1.5 text-xs">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Geofence Status Card -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div
+                class="h-9 w-9 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 font-bold">
+                📍
+              </div>
+              <div>
+                <span class="text-xs font-bold text-slate-800 block">Campus Geofence</span>
+                <span id="geofence-status-text" class="text-[11px] text-emerald-600 font-medium">✓ Inside SBJITMR
+                  Perimeter</span>
+              </div>
+            </div>
+            <button onclick="refreshGeofence()"
+              class="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50">
+              Check
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Right 2/3: Active Passes & QR Ticket -->
+        <div class="lg:col-span-2 space-y-6">
+
+          <!-- Passes Card -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold text-slate-900">My Gate Passes</h3>
+                <p class="text-xs text-slate-500">Track real-time approvals, QR tokens, and exit records</p>
+              </div>
+              <span id="passes-count-badge"
+                class="px-2.5 py-1 rounded-full text-xs font-bold bg-brand-50 text-brand-700 border border-brand-100">
+                0 Active
+              </span>
+            </div>
+
+            <!-- Pass List -->
+            <div id="student-passes-list" class="divide-y divide-slate-100 p-2">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ======================================================================= -->
+    <!-- VIEW C: MENTOR / HOD APPROVAL QUEUE -->
+    <!-- ======================================================================= -->
+    <section id="view-mentor" class="space-y-6 hidden">
+
+      <!-- Mentor Top Banner -->
+      <div
+        class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-indigo-600">Faculty Approval Desk</span>
+            <span class="text-slate-300">•</span>
+            <span id="mentor-dept-badge" class="text-xs font-medium text-slate-500">CSE Dept · 3rd Sem Sec B</span>
+          </div>
+          <h1 id="mentor-name-title" class="text-2xl font-bold text-slate-900 mt-1">Mentor & HOD Approval Queue</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Validate student requests, inspect timetable conflicts, and trigger
+            automated Parent SMS notifications.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="renderMentorQueue()"
+            class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all">
+            ↻ Refresh Queue
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters & Stats Row -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-500 block">Pending Reviews</span>
+            <span id="stat-mentor-pending" class="text-2xl font-bold text-amber-600 mt-1 block">0</span>
+          </div>
+          <span class="text-2xl">⏳</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-500 block">Approved Today</span>
+            <span id="stat-mentor-approved" class="text-2xl font-bold text-emerald-600 mt-1 block">0</span>
+          </div>
+          <span class="text-2xl">✅</span>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-500 block">Parent SMS Dispatched</span>
+            <span id="stat-mentor-sms" class="text-2xl font-bold text-brand-600 mt-1 block">0</span>
+          </div>
+          <span class="text-2xl">📩</span>
+        </div>
+      </div>
+
+      <!-- Queue Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="font-bold text-slate-900 text-base">Incoming Pass Requests</h3>
+          <span class="text-xs text-slate-400">Timetable conflicts highlighted automatically</span>
+        </div>
+
+        <div id="mentor-queue-list" class="divide-y divide-slate-100">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================================= -->
+    <!-- VIEW D: SECURITY GUARD SCANNER & GATE AUDIT LEDGER -->
+    <!-- ======================================================================= -->
+    <section id="view-guard" class="space-y-6 hidden">
+
+      <!-- Guard Top Banner -->
+      <div
+        class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-600">Physical Access
+              Verification</span>
+            <span class="text-slate-300">•</span>
+            <span class="text-xs font-medium text-slate-500">SBJITMR Main Campus Gate</span>
+          </div>
+          <h1 class="text-2xl font-bold text-slate-900 mt-1">Security Guard QR Scanner</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Scan student QR codes for atomic departure validation, exit logging,
+            and replay prevention.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+            <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Scanner Ready
+          </span>
+        </div>
+      </div>
+
+      <!-- Main Scanner Layout (2 Columns) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Column 1: Scanner Viewfinder & Manual Input -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-900 text-sm">QR Code Camera Scanner</h3>
+            <button onclick="toggleCameraScanner()" id="btn-toggle-cam"
+              class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all">
+              Start Camera
+            </button>
+          </div>
+
+          <!-- Video Scanner Container -->
+          <div
+            class="relative bg-slate-900 rounded-xl overflow-hidden min-h-[260px] flex flex-col items-center justify-center text-center p-4">
+            <div id="qr-reader" class="w-full max-w-sm rounded-lg overflow-hidden"></div>
+            <div id="qr-scanner-placeholder" class="text-slate-400 space-y-2">
+              <div class="text-4xl">📷</div>
+              <p class="text-xs text-slate-300">Position student QR code in front of camera</p>
+              <span class="inline-block text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-400 font-mono">Camera or
+                One-Click Quick Scan below</span>
+            </div>
+          </div>
+
+          <!-- Manual / Quick Scan Helper -->
+          <div class="pt-3 border-t border-slate-100">
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Manual Pass ID or QR Token Lookup</label>
+            <div class="flex gap-2">
+              <input type="text" id="manual-scan-input" placeholder="e.g. GP-9821 or token signature"
+                class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+              <button onclick="handleManualScanSubmit()"
+                class="px-4 py-2 bg-slate-900 hover:bg-black text-white font-semibold text-xs rounded-lg shadow-sm transition-all">
+                Verify Pass
+              </button>
+            </div>
+
+            <!-- Quick Test Approved Passes Shortcut -->
+            <div id="guard-quick-test-passes" class="mt-3 flex flex-wrap gap-2 text-[11px]">
+              <!-- Populated by JS with approved passes -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Instantaneous Visual Feedback Screen -->
+        <div class="space-y-4">
+
+          <!-- Scan Result Hero Card -->
+          <div id="scan-feedback-card"
+            class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm min-h-[300px] flex flex-col items-center justify-center text-center transition-all duration-300">
+            <div
+              class="h-16 w-16 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl text-slate-400 mb-3">
+              🔍
+            </div>
+            <h4 class="text-lg font-bold text-slate-700">Awaiting Next Gate Scan</h4>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs">Scan a student's dynamic QR code to verify validity and
+              grant campus exit.</p>
+          </div>
+
+          <!-- Real-Time Gate Exit Ledger -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Live Campus Exit Ledger</h3>
+              <span id="exit-logs-count" class="text-xs text-slate-500 font-mono">0 logged</span>
+            </div>
+            <div id="guard-exit-logs" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-xs">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 4. MODALS & POPUPS -->
+  <!-- ========================================================================= -->
+
+  <!-- Modal: Request New Gate Pass -->
+  <div id="modal-request-pass"
+    class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Request Gate Pass</h3>
+          <p class="text-xs text-slate-500">Live timetable validation & campus geofence will be attached</p>
+        </div>
+        <button onclick="closeNewPassModal()"
+          class="h-8 w-8 rounded-lg hover:bg-slate-200 flex items-center justify-center text-slate-500">✕</button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs">
+
+        <!-- Current Slot Context Info -->
+        <div class="p-3.5 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-brand-600 block">Active Slot at
+              Request</span>
+            <span id="modal-slot-text" class="font-semibold text-slate-900 text-xs">Database Management Systems (11:15 -
+              12:15)</span>
+          </div>
+          <span class="px-2 py-1 bg-brand-600 text-white rounded text-[10px] font-bold">Academic Slot</span>
+        </div>
+
+        <!-- Reason -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Reason Category</label>
+          <select id="pass-reason-type"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            <option value="Medical Appointment / Health Emergency">Medical Appointment / Health Emergency</option>
+            <option value="Academic Off-Campus Work / Project">Academic Off-Campus Work / Project</option>
+            <option value="Urgent Family Matter">Urgent Family Matter</option>
+            <option value="Free Hour Campus Exit">Free Hour Campus Exit</option>
+            <option value="Other Personal Reason">Other Personal Reason</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Detailed Explanation</label>
+          <textarea id="pass-reason-detail" rows="2" placeholder="Provide brief context for the mentor & HOD..."
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <!-- Departure & Return Time -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Departure Time</label>
+            <input type="time" id="pass-departure-time"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Expected Return</label>
+            <input type="time" id="pass-return-time"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- Location Check Verification -->
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-base">📍</span>
+            <div>
+              <span class="font-semibold text-slate-800 block text-[11px]">GPS Campus Check</span>
+              <span class="text-[10px] text-emerald-600 font-medium">Verified: SBJITMR Campus (21.2227° N, 79.0494°
+                E)</span>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold text-[10px]">Validated</span>
+        </div>
+
+        <!-- Action Button -->
+        <button type="button" onclick="submitGatePassRequest()"
+          class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-xs shadow-sm transition-all flex items-center justify-center gap-2 mt-2">
+          <span>Submit for Approval</span>
+          <span>→</span>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Dynamic QR Pass Screen -->
+  <div id="modal-qr-pass"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-center p-6 space-y-4">
+
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="text-left">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Verified Gate Pass</span>
+          <h4 id="qr-modal-pass-id" class="text-base font-bold text-slate-900 font-mono">GP-8924</h4>
+        </div>
+        <button onclick="closeQrModal()"
+          class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold">✕</button>
+      </div>
+
+      <!-- Student Badge Card -->
+      <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-left flex items-center gap-3">
+        <div
+          class="h-10 w-10 rounded-xl bg-brand-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+          🎓
+        </div>
+        <div>
+          <div id="qr-modal-student-name" class="font-bold text-slate-900 text-sm">Aaditya Sharma</div>
+          <div id="qr-modal-student-usn" class="text-xs text-slate-500 font-mono font-medium">CM25001 · CSE(AI&ML) 3B
+          </div>
+        </div>
+      </div>
+
+      <!-- QR Code Center -->
+      <div
+        class="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center">
+        <div id="qr-code-canvas" class="p-2 bg-white rounded-xl shadow-inner"></div>
+        <div class="mt-2 text-[10px] font-mono text-slate-400">Scan at Main Gate for Exit</div>
+      </div>
+
+      <!-- Time remaining & Anti-Fraud Live Watermark -->
+      <div
+        class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between">
+        <span>⏱️ Valid for next:</span>
+        <span id="qr-modal-timer" class="font-mono text-emerald-700 font-bold">29m : 45s</span>
+      </div>
+
+      <p class="text-[10px] text-slate-400">Single-use token. Replay attempts & screenshots are strictly blocked by
+        guard terminal.</p>
+    </div>
+  </div>
+
+  <!-- Toast SMS Dispatched Simulation Notification -->
+  <div id="toast-sms"
+    class="fixed bottom-6 right-6 max-w-sm w-full bg-slate-900 text-white rounded-2xl p-4 shadow-2xl z-50 border border-slate-700 transition-all duration-300 transform translate-y-24 opacity-0 pointer-events-none flex items-start gap-3">
+    <div
+      class="h-9 w-9 rounded-xl bg-brand-500 text-white flex items-center justify-center font-bold text-base shrink-0">
+      📩
+    </div>
+    <div class="flex-1 text-xs">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-white text-xs">Automated Parent SMS</span>
+        <span class="text-[10px] text-slate-400">Just Now</span>
+      </div>
+      <p id="toast-sms-body" class="text-slate-300 mt-1 leading-relaxed text-[11px]">
+        SMS Sent to +91 98765 25001: Dear Parent, Gate Pass GP-8924 for Aaditya Sharma has been approved.
+      </p>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 5. JAVASCRIPT LOGIC ENGINE -->
+  <!-- ========================================================================= -->
+  <script>
+    // -------------------------------------------------------------------------
+    // A. INTRO SCREEN HANDLER
+    // -------------------------------------------------------------------------
+    const introScreen = document.getElementById('intro-screen');
+    const introVideo = document.getElementById('intro-video');
+    let introFinished = false;
+
+    function finishIntro() {
+      if (introFinished) return;
+      introFinished = true;
+      if (introScreen) {
+        introScreen.style.opacity = '0';
+        introScreen.style.visibility = 'hidden';
+        setTimeout(() => {
+          introScreen.style.display = 'none';
+        }, 600);
+      }
+    }
+
+    if (introVideo) {
+      introVideo.addEventListener('ended', finishIntro);
+      // Attempt autoplay
+      introVideo.play().catch(function (e) {
+        console.warn("Autoplay notice:", e);
+      });
+    }
+
+    // Safety fallback timer so users are never stuck if video is unsupported
+    setTimeout(() => {
+      if (!introFinished) finishIntro();
+    }, 15000);
+
+    // -------------------------------------------------------------------------
+    // B. MOCK DATABASE & INITIAL STATE
+    // -------------------------------------------------------------------------
+    const TIMETABLE_TODAY = [
+      { start: '09:00', end: '10:00', subject: 'Data Structures & Algorithms', code: 'CS301', faculty: 'Dr. S. Joshi', isBreak: false },
+      { start: '10:00', end: '11:00', subject: 'Operating Systems', code: 'CS302', faculty: 'Prof. R. Iyer', isBreak: false },
+      { start: '11:00', end: '11:15', subject: 'Morning Tea Break', code: 'BRK', faculty: '-', isBreak: true },
+      { start: '11:15', end: '12:15', subject: 'Database Management Systems', code: 'CS303', faculty: 'Dr. M. Khan', isBreak: false },
+      { start: '12:15', end: '13:15', subject: 'Computer Networks', code: 'CS304', faculty: 'Prof. N. Reddy', isBreak: false },
+      { start: '13:15', end: '14:00', subject: 'Campus Lunch Break', code: 'LUNCH', faculty: '-', isBreak: true },
+      { start: '14:00', end: '15:00', subject: 'Software Engineering', code: 'CS305', faculty: 'Dr. A. Verma', isBreak: false },
+      { start: '15:00', end: '16:00', subject: 'Web Technologies Lab', code: 'CS306L', faculty: 'Prof. P. Sharma', isBreak: false },
+    ];
+
+    let currentUser = null; // { role: 'STUDENT' | 'MENTOR' | 'GUARD' | 'ADMIN', name: '', usn: '', dept: '', sem: 3, sec: 'B', parentPhone: '' }
+    let gatePasses = [
+      {
+        id: 'GP-8921',
+        usn: 'CM25001',
+        studentName: 'Aaditya Sharma',
+        dept: 'CSE (AI&ML)',
+        sem: 3,
+        sec: 'B',
+        parentPhone: '+919876525001',
+        reason: 'Medical Appointment / Health Emergency',
+        reasonDetail: 'Consultation with physician for high fever and headache.',
+        slotSubject: 'Database Management Systems',
+        slotTime: '11:15 - 12:15',
+        departureTime: '11:30 AM',
+        returnTime: '03:00 PM',
+        status: 'APPROVED', // PENDING_MENTOR | PENDING_HOD | APPROVED | REJECTED | USED
+        requestTime: '11:05 AM',
+        approvalTime: '11:12 AM',
+        approverName: 'Dr. Sarah Connor (Mentor/HOD)',
+        qrToken: 'GP8921-SIG-VALID-2026'
+      },
+      {
+        id: 'GP-8922',
+        usn: 'CM25002',
+        studentName: 'Aakash Verma',
+        dept: 'CSE (AI&ML)',
+        sem: 3,
+        sec: 'B',
+        parentPhone: '+919876525002',
+        reason: 'Academic Off-Campus Work / Project',
+        reasonDetail: 'Project component purchase from Sitabuldi electronics market.',
+        slotSubject: 'Computer Networks',
+        slotTime: '12:15 - 13:15',
+        departureTime: '12:20 PM',
+        returnTime: '04:00 PM',
+        status: 'PENDING_MENTOR',
+        requestTime: '11:20 AM',
+        approvalTime: null,
+        approverName: null,
+        qrToken: 'GP8922-SIG-PENDING'
+      },
+      {
+        id: 'GP-8923',
+        usn: 'CM25003',
+        studentName: 'Abhishek Kumar',
+        dept: 'CSE (AI&ML)',
+        sem: 3,
+        sec: 'B',
+        parentPhone: '+919876525003',
+        reason: 'Urgent Family Matter',
+        reasonDetail: 'Family emergency at home.',
+        slotSubject: 'Database Management Systems',
+        slotTime: '11:15 - 12:15',
+        departureTime: '11:45 AM',
+        returnTime: 'Tomorrow',
+        status: 'PENDING_MENTOR',
+        requestTime: '11:25 AM',
+        approvalTime: null,
+        approverName: null,
+        qrToken: 'GP8923-SIG-PENDING'
+      }
+    ];
+
+    let exitLogs = [
+      { id: 'LOG-1', passId: 'GP-8918', usn: 'CM25007', name: 'Aman Gupta', gate: 'Main Gate 1', time: '10:45 AM', status: 'EXIT_SUCCESS' }
+    ];
+
+    // -------------------------------------------------------------------------
+    // C. CLOCK & LIVE TIMETABLE EVALUATOR
+    // -------------------------------------------------------------------------
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dayStr = now.toLocaleDateString([], { weekday: 'long' });
+
+      const clockEl = document.getElementById('live-clock');
+      const dayEl = document.getElementById('live-day');
+      if (clockEl) clockEl.innerText = timeStr;
+      if (dayEl) dayEl.innerText = dayStr;
+
+      // Evaluate active slot (for demo we use current mock time or 11:30 AM)
+      evaluateCurrentSlot();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function evaluateCurrentSlot() {
+      // Default mock active slot
+      const current = TIMETABLE_TODAY[3]; // DBMS
+      const subjEl = document.getElementById('tt-subject-name');
+      const timeEl = document.getElementById('tt-subject-time');
+      const facEl = document.getElementById('tt-subject-faculty');
+      const modalSlotEl = document.getElementById('modal-slot-text');
+
+      if (subjEl) subjEl.innerText = current.subject;
+      if (timeEl) timeEl.innerText = `${current.start} - ${current.end}`;
+      if (facEl) facEl.innerText = current.faculty;
+      if (modalSlotEl) modalSlotEl.innerText = `${current.subject} (${current.start} - ${current.end})`;
+
+      // Render today's schedule in student view
+      const scheduleEl = document.getElementById('student-day-schedule');
+      if (scheduleEl && scheduleEl.children.length === 0) {
+        scheduleEl.innerHTML = TIMETABLE_TODAY.map((s, i) => `
+          <div class="p-2 rounded-lg ${i === 3 ? 'bg-brand-50 border border-brand-200 text-brand-900 font-semibold' : 'bg-slate-50 border border-slate-100 text-slate-600'} flex items-center justify-between">
+            <div>
+              <span class="font-mono text-[10px] block text-slate-400">${s.start} - ${s.end}</span>
+              <span>${s.subject}</span>
+            </div>
+            ${i === 3 ? '<span class="px-1.5 py-0.5 rounded bg-brand-600 text-white text-[9px] font-bold uppercase">Now</span>' : ''}
+          </div>
+        `).join('');
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // D. AUTHENTICATION & TABS
+    // -------------------------------------------------------------------------
+    let selectedLoginRole = 'STUDENT';
+
+    function switchAuthTab(tab) {
+      const btnIn = document.getElementById('tab-btn-signin');
+      const btnUp = document.getElementById('tab-btn-signup');
+      const formIn = document.getElementById('form-signin-container');
+      const formUp = document.getElementById('form-signup-container');
+
+      if (tab === 'signin') {
+        btnIn.className = "py-2 rounded-lg transition-all bg-white text-slate-900 shadow-sm";
+        btnUp.className = "py-2 rounded-lg transition-all text-slate-500 hover:text-slate-900";
+        formIn.classList.remove('hidden');
+        formUp.classList.add('hidden');
+      } else {
+        btnUp.className = "py-2 rounded-lg transition-all bg-white text-slate-900 shadow-sm";
+        btnIn.className = "py-2 rounded-lg transition-all text-slate-500 hover:text-slate-900";
+        formUp.classList.remove('hidden');
+        formIn.classList.add('hidden');
+      }
+    }
+
+    function selectLoginRole(role) {
+      selectedLoginRole = role;
+      document.querySelectorAll('.role-pill').forEach(btn => {
+        btn.className = "role-pill border border-slate-200 bg-white text-slate-600 py-2 px-3 rounded-lg text-xs font-semibold flex flex-col items-center gap-1 hover:border-slate-300 transition-all";
+      });
+      const active = document.getElementById(`role-pill-${role}`);
+      if (active) {
+        active.className = "role-pill border border-brand-600 bg-brand-50 text-brand-700 py-2 px-3 rounded-lg text-xs font-semibold flex flex-col items-center gap-1 transition-all";
+      }
+
+      const idLbl = document.getElementById('lbl-identifier');
+      const idInput = document.getElementById('login-identifier');
+      if (role === 'STUDENT') {
+        idLbl.innerText = "Student Roll No / USN";
+        idInput.value = "CM25001";
+      } else if (role === 'MENTOR') {
+        idLbl.innerText = "Faculty Email / Staff ID";
+        idInput.value = "warden@gateguard.demo";
+      } else {
+        idLbl.innerText = "Security Guard ID / Email";
+        idInput.value = "guard@gateguard.demo";
+      }
+    }
+
+    function quickDemoLogin(role, identifier, password) {
+      selectLoginRole(role);
+      document.getElementById('login-identifier').value = identifier;
+      document.getElementById('login-password').value = password;
+      handleLoginSubmit();
+    }
+
+    function handleLoginSubmit() {
+      const identifier = document.getElementById('login-identifier').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+
+      if (!identifier) {
+        alert("Please enter your identifier / USN");
+        return;
+      }
+
+      if (selectedLoginRole === 'STUDENT') {
+        currentUser = {
+          role: 'STUDENT',
+          name: identifier.toUpperCase() === 'CM25001' ? 'Aaditya Sharma' : `Student (${identifier.toUpperCase()})`,
+          usn: identifier.toUpperCase(),
+          dept: 'CSE (AI&ML)',
+          sem: 3,
+          sec: 'B',
+          parentPhone: '+919876525001'
+        };
+      } else if (selectedLoginRole === 'MENTOR' || selectedLoginRole === 'ADMIN') {
+        currentUser = {
+          role: 'MENTOR',
+          name: 'Dr. Sarah Connor (HOD/Mentor)',
+          dept: 'CSE (AI&ML)',
+          staffId: identifier
+        };
+      } else {
+        currentUser = {
+          role: 'GUARD',
+          name: 'Officer John Davis',
+          gate: 'Main Campus Gate 1',
+          guardId: identifier
+        };
+      }
+
+      renderUserSession();
+    }
+
+    function handleSignupSubmit() {
+      const name = document.getElementById('signup-name').value.trim();
+      const usn = document.getElementById('signup-usn').value.trim();
+      const dept = document.getElementById('signup-dept').value;
+      const sem = document.getElementById('signup-sem').value;
+      const sec = document.getElementById('signup-sec').value;
+      const phone = document.getElementById('signup-parent-phone').value.trim();
+      const pwd = document.getElementById('signup-password').value.trim();
+
+      if (!name || !usn || !phone || !pwd) {
+        alert("Please fill in all registration fields.");
+        return;
+      }
+
+      currentUser = {
+        role: 'STUDENT',
+        name: name,
+        usn: usn.toUpperCase(),
+        dept: dept,
+        sem: Number(sem),
+        sec: sec,
+        parentPhone: '+91' + phone
+      };
+
+      renderUserSession();
+    }
+
+    function logout() {
+      currentUser = null;
+      renderUserSession();
+    }
+
+    // -------------------------------------------------------------------------
+    // E. VIEW ROUTING & STATE RENDERER
+    // -------------------------------------------------------------------------
+    function renderUserSession() {
+      const authArea = document.getElementById('nav-auth-area');
+      const vAuth = document.getElementById('view-auth');
+      const vStudent = document.getElementById('view-student');
+      const vMentor = document.getElementById('view-mentor');
+      const vGuard = document.getElementById('view-guard');
+
+      // Hide all views first
+      vAuth.classList.add('hidden');
+      vStudent.classList.add('hidden');
+      vMentor.classList.add('hidden');
+      vGuard.classList.add('hidden');
+
+      if (!currentUser) {
+        // Show Auth View
+        vAuth.classList.remove('hidden');
+        authArea.innerHTML = `
+          <button onclick="switchAuthTab('signin')" class="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-all">
+            Sign In
+          </button>
+        `;
+        return;
+      }
+
+      // Topbar user menu
+      authArea.innerHTML = `
+        <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+          <div class="text-right hidden sm:block">
+            <span class="text-xs font-bold text-slate-900 block leading-tight">${currentUser.name}</span>
+            <span class="text-[10px] text-slate-500 uppercase font-semibold">${currentUser.role}</span>
+          </div>
+          <button onclick="logout()" title="Sign Out" class="px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg font-semibold transition-all">
+            Logout
+          </button>
+        </div>
+      `;
+
+      if (currentUser.role === 'STUDENT') {
+        vStudent.classList.remove('hidden');
+        renderStudentPortal();
+      } else if (currentUser.role === 'MENTOR' || currentUser.role === 'ADMIN') {
+        vMentor.classList.remove('hidden');
+        renderMentorQueue();
+      } else if (currentUser.role === 'GUARD') {
+        vGuard.classList.remove('hidden');
+        renderGuardPortal();
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // F. STUDENT WORKFLOW: PASS REQUESTS & QR SCREEN
+    // -------------------------------------------------------------------------
+    function renderStudentPortal() {
+      document.getElementById('student-header-name').innerText = currentUser.name;
+      document.getElementById('student-header-usn').innerText = currentUser.usn;
+      document.getElementById('student-header-dept').innerText = `${currentUser.dept} · Sem ${currentUser.sem} · Sec ${currentUser.sec}`;
+      document.getElementById('student-header-parent').innerText = currentUser.parentPhone || '+91 9876525001';
+
+      // Set default departure/return time
+      const now = new Date();
+      const dep = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      const nowPlus2 = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      const ret = nowPlus2.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+      const depInput = document.getElementById('pass-departure-time');
+      const retInput = document.getElementById('pass-return-time');
+      if (depInput) depInput.value = dep;
+      if (retInput) retInput.value = ret;
+
+      renderStudentPassesList();
+    }
+
+    function renderStudentPassesList() {
+      const listEl = document.getElementById('student-passes-list');
+      const myPasses = gatePasses.filter(p => p.usn === currentUser.usn || p.usn === 'CM25001');
+
+      const countBadge = document.getElementById('passes-count-badge');
+      if (countBadge) countBadge.innerText = `${myPasses.length} Total`;
+
+      if (myPasses.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-8 text-center text-slate-400">
+            <div class="text-3xl mb-2">📋</div>
+            <p class="text-xs">No gate pass requests found. Click "+ Request Gate Pass" to apply.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = myPasses.map(p => {
+        let statusBadge = '';
+        let actionBtn = '';
+
+        if (p.status === 'APPROVED') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Approved
+          </span>`;
+          actionBtn = `<button onclick="openQrModal('${p.id}')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1">
+            <span>View QR Pass</span>
+            <span>📱</span>
+          </button>`;
+        } else if (p.status === 'PENDING_MENTOR' || p.status === 'PENDING_HOD') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1">
+            <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping"></span> Pending Review
+          </span>`;
+          actionBtn = `<span class="text-xs text-slate-400 font-medium">Awaiting Mentor Approval</span>`;
+        } else if (p.status === 'USED') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold">
+            ✓ Exited Campus
+          </span>`;
+          actionBtn = `<span class="text-xs text-slate-400 font-mono">Completed</span>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">
+            ✕ Rejected
+          </span>`;
+          actionBtn = `<span class="text-xs text-rose-500 font-medium">Request Denied</span>`;
+        }
+
+        return `
+          <div class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-slate-50/60 rounded-xl transition-all">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-slate-900 text-sm">${p.id}</span>
+                ${statusBadge}
+                <span class="text-[10px] text-slate-400 font-mono">Req at ${p.requestTime}</span>
+              </div>
+              <div class="text-xs text-slate-700 font-semibold mt-1.5">${p.reason}</div>
+              <p class="text-xs text-slate-500 mt-0.5">${p.reasonDetail}</p>
+              <div class="flex items-center gap-3 text-[11px] text-slate-500 mt-2 font-mono">
+                <span>Out: <strong>${p.departureTime}</strong></span>
+                <span>•</span>
+                <span>Return: <strong>${p.returnTime}</strong></span>
+                <span>•</span>
+                <span>Subject: <strong>${p.slotSubject}</strong></span>
+              </div>
+            </div>
+            <div class="shrink-0 flex items-center">
+              ${actionBtn}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openNewPassModal() {
+      document.getElementById('modal-request-pass').classList.remove('hidden');
+    }
+    function closeNewPassModal() {
+      document.getElementById('modal-request-pass').classList.add('hidden');
+    }
+
+    function submitGatePassRequest() {
+      const reasonType = document.getElementById('pass-reason-type').value;
+      const reasonDetail = document.getElementById('pass-reason-detail').value.trim() || 'Urgent academic/personal requirement.';
+      const dep = document.getElementById('pass-departure-time').value;
+      const ret = document.getElementById('pass-return-time').value;
+
+      const newPassId = 'GP-' + Math.floor(1000 + Math.random() * 9000);
+      const newPass = {
+        id: newPassId,
+        usn: currentUser.usn,
+        studentName: currentUser.name,
+        dept: currentUser.dept,
+        sem: currentUser.sem,
+        sec: currentUser.sec,
+        parentPhone: currentUser.parentPhone || '+919876525001',
+        reason: reasonType,
+        reasonDetail: reasonDetail,
+        slotSubject: 'Database Management Systems',
+        slotTime: '11:15 - 12:15',
+        departureTime: dep ? `${dep} hrs` : '11:30 AM',
+        returnTime: ret ? `${ret} hrs` : '03:00 PM',
+        status: 'PENDING_MENTOR',
+        requestTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        approvalTime: null,
+        approverName: null,
+        qrToken: `${newPassId}-SIG-${Date.now()}`
+      };
+
+      gatePasses.unshift(newPass);
+      closeNewPassModal();
+      renderStudentPassesList();
+      alert(`✅ Pass Request ${newPassId} submitted successfully!\nRouted to Mentor & HOD for real-time review.`);
+    }
+
+    function openQrModal(passId) {
+      const p = gatePasses.find(x => x.id === passId);
+      if (!p) return;
+
+      document.getElementById('qr-modal-pass-id').innerText = p.id;
+      document.getElementById('qr-modal-student-name').innerText = p.studentName;
+      document.getElementById('qr-modal-student-usn').innerText = `${p.usn} · ${p.dept}`;
+
+      const qrContainer = document.getElementById('qr-code-canvas');
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: JSON.stringify({ passId: p.id, usn: p.usn, token: p.qrToken, validUntil: Date.now() + 1800000 }),
+        width: 170,
+        height: 170,
+        colorDark: "#0f172a",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      document.getElementById('modal-qr-pass').classList.remove('hidden');
+    }
+
+    function closeQrModal() {
+      document.getElementById('modal-qr-pass').classList.add('hidden');
+    }
+
+    function refreshGeofence() {
+      const statusText = document.getElementById('geofence-status-text');
+      statusText.innerText = "Checking GPS coordinates...";
+      setTimeout(() => {
+        statusText.innerText = "✓ Inside SBJITMR Perimeter (21.2227° N, 79.0494° E)";
+      }, 400);
+    }
+
+    // -------------------------------------------------------------------------
+    // G. MENTOR & HOD APPROVAL DESK & PARENT SMS DISPATCH
+    // -------------------------------------------------------------------------
+    function renderMentorQueue() {
+      const pending = gatePasses.filter(p => p.status === 'PENDING_MENTOR' || p.status === 'PENDING_HOD');
+      const approved = gatePasses.filter(p => p.status === 'APPROVED' || p.status === 'USED');
+
+      document.getElementById('stat-mentor-pending').innerText = pending.length;
+      document.getElementById('stat-mentor-approved').innerText = approved.length;
+      document.getElementById('stat-mentor-sms').innerText = approved.length;
+
+      const queueEl = document.getElementById('mentor-queue-list');
+      if (pending.length === 0) {
+        queueEl.innerHTML = `
+          <div class="p-8 text-center text-slate-400">
+            <div class="text-3xl mb-2">🎉</div>
+            <p class="text-xs">No pending gate pass requests in queue. All requests are cleared!</p>
+          </div>
+        `;
+        return;
+      }
+
+      queueEl.innerHTML = pending.map(p => `
+        <div class="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 hover:bg-slate-50 transition-all">
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-bold text-slate-900 text-sm">${p.id}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                Action Required
+              </span>
+              <span class="text-xs text-slate-400 font-mono">Requested at ${p.requestTime}</span>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-900 text-sm">${p.studentName}</span>
+              <span class="text-xs text-slate-500 font-mono">(${p.usn} · ${p.dept} · Sec ${p.sec})</span>
+            </div>
+
+            <div class="text-xs font-semibold text-slate-700">${p.reason}</div>
+            <p class="text-xs text-slate-500">${p.reasonDetail}</p>
+
+            <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono">
+              <span>Class: <strong class="text-slate-900">${p.slotSubject}</strong></span>
+              <span>•</span>
+              <span>Departure: <strong>${p.departureTime}</strong></span>
+              <span>•</span>
+              <span>Return: <strong>${p.returnTime}</strong></span>
+              <span>•</span>
+              <span>Parent Phone: <strong>${p.parentPhone}</strong></span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="rejectPass('${p.id}')" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-all">
+              ✕ Reject
+            </button>
+            <button onclick="approvePass('${p.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5">
+              <span>✓ Approve & Send SMS</span>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function approvePass(passId) {
+      const p = gatePasses.find(x => x.id === passId);
+      if (!p) return;
+
+      p.status = 'APPROVED';
+      p.approvalTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      p.approverName = currentUser ? currentUser.name : 'Dr. Sarah Connor (HOD)';
+
+      // Trigger Parent SMS Simulation
+      triggerParentSms(p);
+
+      renderMentorQueue();
+    }
+
+    function rejectPass(passId) {
+      const p = gatePasses.find(x => x.id === passId);
+      if (!p) return;
+
+      p.status = 'REJECTED';
+      renderMentorQueue();
+    }
+
+    function triggerParentSms(pass) {
+      const toast = document.getElementById('toast-sms');
+      const body = document.getElementById('toast-sms-body');
+
+      const messageText = `SMS Sent to ${pass.parentPhone}: "Dear Parent, Gate Pass ${pass.id} for your ward ${pass.studentName} (${pass.usn}) has been APPROVED by Mentor/HOD for departure at ${pass.departureTime}."`;
+
+      body.innerText = messageText;
+      toast.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+      }, 5000);
+    }
+
+    // -------------------------------------------------------------------------
+    // H. SECURITY GUARD TERMINAL & QR SCANNING
+    // -------------------------------------------------------------------------
+    let html5QrCode = null;
+    let cameraActive = false;
+
+    function renderGuardPortal() {
+      renderGuardExitLogs();
+      renderGuardQuickTestPasses();
+    }
+
+    function renderGuardQuickTestPasses() {
+      const container = document.getElementById('guard-quick-test-passes');
+      const approved = gatePasses.filter(p => p.status === 'APPROVED');
+
+      if (approved.length === 0) {
+        container.innerHTML = `<span class="text-slate-400">No active approved passes to simulate scan.</span>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <span class="text-slate-500 font-semibold">1-Click Test Scan:</span>
+        ${approved.map(p => `
+          <button onclick="processGuardVerification('${p.id}')" class="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-mono font-semibold hover:bg-emerald-100">
+            Scan ${p.id} (${p.studentName.split(' ')[0]})
+          </button>
+        `).join('')}
+      `;
+    }
+
+    function renderGuardExitLogs() {
+      const logsEl = document.getElementById('guard-exit-logs');
+      const countEl = document.getElementById('exit-logs-count');
+      if (countEl) countEl.innerText = `${exitLogs.length} logged`;
+
+      if (exitLogs.length === 0) {
+        logsEl.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">No exit logs recorded today.</div>`;
+        return;
+      }
+
+      logsEl.innerHTML = exitLogs.map(l => `
+        <div class="p-3 flex items-center justify-between hover:bg-slate-50">
+          <div>
+            <span class="font-mono font-bold text-slate-900">${l.usn}</span>
+            <span class="text-slate-600 font-medium ml-1.5">${l.name}</span>
+            <span class="text-[10px] text-slate-400 font-mono block">${l.passId} · ${l.gate}</span>
+          </div>
+          <span class="font-mono text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+            ${l.time} ✓
+          </span>
+        </div>
+      `).join('');
+    }
+
+    function handleManualScanSubmit() {
+      const input = document.getElementById('manual-scan-input').value.trim();
+      if (!input) return;
+      processGuardVerification(input);
+    }
+
+    function processGuardVerification(scannedData) {
+      let passId = scannedData;
+      try {
+        const parsed = JSON.parse(scannedData);
+        if (parsed.passId) passId = parsed.passId;
+      } catch (e) { }
+
+      const pass = gatePasses.find(p => p.id === passId || p.qrToken === scannedData);
+      const card = document.getElementById('scan-feedback-card');
+
+      if (!pass) {
+        // RED: Invalid Pass
+        card.className = "bg-rose-50 rounded-2xl border-2 border-rose-300 p-6 shadow-lg min-h-[300px] flex flex-col items-center justify-center text-center transition-all pulse-red";
+        card.innerHTML = `
+          <div class="h-20 w-20 rounded-full bg-rose-600 text-white flex items-center justify-center text-4xl mb-3 shadow-md">
+            ✕
+          </div>
+          <span class="px-3 py-1 rounded-full bg-rose-200 text-rose-900 font-extrabold text-xs uppercase tracking-wider mb-2">ACCESS DENIED</span>
+          <h4 class="text-2xl font-bold text-rose-900">INVALID PASS / UNKNOWN TOKEN</h4>
+          <p class="text-xs text-rose-700 mt-2 max-w-sm">No valid active record exists for this QR code. Do not allow student to exit campus.</p>
+        `;
+        return;
+      }
+
+      if (pass.status === 'USED') {
+        // RED: Already Used / Replay Attack
+        card.className = "bg-amber-50 rounded-2xl border-2 border-amber-300 p-6 shadow-lg min-h-[300px] flex flex-col items-center justify-center text-center transition-all pulse-red";
+        card.innerHTML = `
+          <div class="h-20 w-20 rounded-full bg-amber-600 text-white flex items-center justify-center text-4xl mb-3 shadow-md">
+            ⚠️
+          </div>
+          <span class="px-3 py-1 rounded-full bg-amber-200 text-amber-900 font-extrabold text-xs uppercase tracking-wider mb-2">REPLAY DETECTED</span>
+          <h4 class="text-2xl font-bold text-amber-900">PASS ALREADY USED</h4>
+          <p class="text-xs text-amber-800 mt-2 max-w-sm">Gate Pass <strong>${pass.id}</strong> for <strong>${pass.studentName} (${pass.usn})</strong> has already been scanned and invalidated.</p>
+        `;
+        return;
+      }
+
+      if (pass.status !== 'APPROVED') {
+        // RED: Not Approved
+        card.className = "bg-rose-50 rounded-2xl border-2 border-rose-300 p-6 shadow-lg min-h-[300px] flex flex-col items-center justify-center text-center transition-all pulse-red";
+        card.innerHTML = `
+          <div class="h-20 w-20 rounded-full bg-rose-600 text-white flex items-center justify-center text-4xl mb-3 shadow-md">
+            ✕
+          </div>
+          <span class="px-3 py-1 rounded-full bg-rose-200 text-rose-900 font-extrabold text-xs uppercase tracking-wider mb-2">NOT APPROVED</span>
+          <h4 class="text-2xl font-bold text-rose-900">UNAUTHORIZED EXIT ATTEMPT</h4>
+          <p class="text-xs text-rose-700 mt-2 max-w-sm">Pass status is currently <strong>${pass.status}</strong>. Student has not received required faculty clearance.</p>
+        `;
+        return;
+      }
+
+      // GREEN: VALID PASS - GRANT EXIT
+      pass.status = 'USED';
+      const logTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      exitLogs.unshift({
+        id: 'LOG-' + (exitLogs.length + 1),
+        passId: pass.id,
+        usn: pass.usn,
+        name: pass.studentName,
+        gate: 'Main Campus Gate 1',
+        time: logTime,
+        status: 'EXIT_SUCCESS'
+      });
+
+      card.className = "bg-emerald-50 rounded-2xl border-2 border-emerald-300 p-6 shadow-lg min-h-[300px] flex flex-col items-center justify-center text-center transition-all pulse-green";
+      card.innerHTML = `
+        <div class="h-20 w-20 rounded-full bg-emerald-600 text-white flex items-center justify-center text-4xl mb-3 shadow-md">
+          ✓
+        </div>
+        <span class="px-3 py-1 rounded-full bg-emerald-200 text-emerald-900 font-extrabold text-xs uppercase tracking-wider mb-2">VALID GATE PASS</span>
+        <h4 class="text-2xl font-bold text-emerald-900">EXIT GRANTED</h4>
+        <div class="mt-3 p-3 bg-white/80 rounded-xl border border-emerald-200 text-xs text-left max-w-sm w-full space-y-1 font-mono">
+          <div class="flex justify-between"><span class="text-slate-500">Student:</span><strong class="text-slate-900">${pass.studentName}</strong></div>
+          <div class="flex justify-between"><span class="text-slate-500">USN:</span><strong class="text-slate-900">${pass.usn}</strong></div>
+          <div class="flex justify-between"><span class="text-slate-500">Dept:</span><strong class="text-slate-900">${pass.dept}</strong></div>
+          <div class="flex justify-between"><span class="text-slate-500">Pass ID:</span><strong class="text-slate-900">${pass.id}</strong></div>
+          <div class="flex justify-between"><span class="text-slate-500">Exit Time:</span><strong class="text-emerald-700">${logTime}</strong></div>
+        </div>
+      `;
+
+      renderGuardExitLogs();
+      renderGuardQuickTestPasses();
+    }
+
+    function toggleCameraScanner() {
+      const readerEl = document.getElementById('qr-reader');
+      const placeholder = document.getElementById('qr-scanner-placeholder');
+      const btn = document.getElementById('btn-toggle-cam');
+
+      if (cameraActive) {
+        if (html5QrCode) {
+          html5QrCode.stop().then(() => {
+            cameraActive = false;
+            btn.innerText = "Start Camera";
+            placeholder.classList.remove('hidden');
+          }).catch(console.error);
+        }
+      } else {
+        html5QrCode = new Html5Qrcode("qr-reader");
+        placeholder.classList.add('hidden');
+        btn.innerText = "Stop Camera";
+        cameraActive = true;
+
+        html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 200 },
+          (decodedText) => {
+            processGuardVerification(decodedText);
+          },
+          (errorMessage) => { }
+        ).catch(err => {
+          console.warn("Camera access denied or unavailable:", err);
+          cameraActive = false;
+          btn.innerText = "Start Camera";
+          placeholder.classList.remove('hidden');
+          alert("Camera access unavailable on this device. You can use the 1-Click Test Scan or manual input.");
+        });
+      }
+    }
+
+    // Initialize state
+    renderUserSession();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,267 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --emerald: #059669;
+  --emerald-soft: #d1fae5;
+  --indigo: #4f46e5;
+  --indigo-soft: #e0e7ff;
+  --amber: #d97706;
+  --amber-soft: #fef3c7;
+  --rose: #e11d48;
+  --rose-soft: #ffe4e6;
+  --slate-soft: #e2e8f0;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+@keyframes smoothWatermarkSpin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(560px, 75vw);
+  height: min(560px, 75vw);
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("/assets/logo.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.055;
+  filter: grayscale(40%);
+  animation: smoothWatermarkSpin 45s linear infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+main, header, nav, footer, div, section {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- 3D rotating logo ---------- */
+.logo-stage {
+  perspective: 800px;
+  display: inline-block;
+}
+.logo-cube {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  transform-style: preserve-3d;
+  animation: spin3d 9s linear infinite;
+}
+.logo-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  backface-visibility: hidden;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+}
+.logo-face.f-front {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateZ(32px);
+}
+.logo-face.f-back {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  transform: rotateY(180deg) translateZ(32px);
+}
+.logo-face.f-right {
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  transform: rotateY(90deg) translateZ(32px);
+}
+.logo-face.f-left {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+  transform: rotateY(-90deg) translateZ(32px);
+}
+.logo-face.f-top {
+  background: linear-gradient(135deg, #047857 0%, #064e3b 100%);
+  transform: rotateX(90deg) translateZ(32px);
+  font-size: 10px;
+}
+.logo-face.f-bottom {
+  background: linear-gradient(135deg, #3730a3 0%, #1e1b4b 100%);
+  transform: rotateX(-90deg) translateZ(32px);
+  font-size: 10px;
+}
+@keyframes spin3d {
+  0%   { transform: rotateY(0deg) rotateX(-10deg); }
+  100% { transform: rotateY(360deg) rotateX(-10deg); }
+}
+.logo-stage.lg .logo-cube { width: 96px; height: 96px; }
+.logo-stage.lg .logo-face { border-radius: 18px; font-size: 13px; }
+.logo-stage.lg .logo-face.f-front { transform: translateZ(48px); }
+.logo-stage.lg .logo-face.f-back { transform: rotateY(180deg) translateZ(48px); }
+.logo-stage.lg .logo-face.f-right { transform: rotateY(90deg) translateZ(48px); }
+.logo-stage.lg .logo-face.f-left { transform: rotateY(-90deg) translateZ(48px); }
+.logo-stage.lg .logo-face.f-top { transform: rotateX(90deg) translateZ(48px); }
+.logo-stage.lg .logo-face.f-bottom { transform: rotateX(-90deg) translateZ(48px); }
+
+/* ---------- Card / surfaces ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.card-hover { transition: all 0.2s ease; }
+.card-hover:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: #ffffff;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--emerald);
+  color: #ffffff;
+}
+.btn-primary:hover { background: #047857; }
+.btn-secondary {
+  background: #ffffff;
+  color: var(--ink);
+  border-color: var(--border);
+}
+.btn-secondary:hover { background: #f1f5f9; }
+.btn-indigo { background: var(--indigo); color: #ffffff; }
+.btn-indigo:hover { background: #4338ca; }
+.btn-danger { background: #ffffff; color: #b91c1c; border-color: #fecaca; }
+.btn-danger:hover { background: #fef2f2; }
+.btn-success { background: #ffffff; color: #047857; border-color: #a7f3d0; }
+.btn-success:hover { background: #ecfdf5; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- Status badges ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.badge-amber { background: var(--amber-soft); color: var(--amber); }
+.badge-emerald { background: var(--emerald-soft); color: var(--emerald); }
+.badge-indigo { background: var(--indigo-soft); color: var(--indigo); }
+.badge-rose { background: var(--rose-soft); color: var(--rose); }
+.badge-slate { background: var(--slate-soft); color: #475569; }
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: #64748b;
+}
+
+h1, h2, h3 { color: #0f172a; }
+
+/* Animations */
+.fade-in { animation: fadeIn 0.35s ease both; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse-dot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  animation: ping 1.6s ease-out infinite;
+}
+@keyframes ping {
+  0% { transform: scale(1); opacity: 0.5; }
+  80%, 100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* QR scanner styling */
+#qr-reader video {
+  border-radius: 12px !important;
+}
+#qr-reader__dashboard_section_csr button {
+  background: var(--indigo) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  border: none !important;
+}
+
+/* Scrollbar */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
