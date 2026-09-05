@@ -261,11 +261,11 @@ function LoginInner() {
                     onChange={setIdentifier}
                     placeholder={
                       role === "student"
-                        ? "SBJ23CSE001"
+                        ? "CM25001"
                         : role === "hod"
-                          ? "hod_cse"
+                          ? "hod_aiml or hod_cse"
                           : role === "mentor"
-                            ? "mentor_cse_5_a"
+                            ? "mentor_cse_3_b"
                             : role === "admin"
                               ? "admin"
                               : "guard1"
@@ -519,9 +519,33 @@ function LoginInner() {
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-medium text-indigo-700">Mentor</td>
+                  <td className="py-2 font-medium text-emerald-700">Student (AIML)</td>
                   <td>
-                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">mentor_cse_5_a</code>
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">CM25001</code>
+                  </td>
+                  <td>
+                    <code className="font-mono text-slate-500">student123</code>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="rounded bg-emerald-50 px-2 py-1 font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                      onClick={() => {
+                        setRole("student");
+                        setMode("login");
+                        setIdentifier("CM25001");
+                        setPassword("student123");
+                        setError(null);
+                      }}
+                    >
+                      Use →
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 font-medium text-indigo-700">AIML Mentor (3-B)</td>
+                  <td>
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">mentor_cse_3_b</code>
                   </td>
                   <td>
                     <code className="font-mono text-slate-500">mentor123</code>
@@ -533,7 +557,7 @@ function LoginInner() {
                       onClick={() => {
                         setRole("mentor");
                         setMode("login");
-                        setIdentifier("mentor_cse_5_a");
+                        setIdentifier("mentor_cse_3_b");
                         setPassword("mentor123");
                         setError(null);
                       }}
@@ -543,7 +567,31 @@ function LoginInner() {
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-medium text-indigo-700">HOD</td>
+                  <td className="py-2 font-medium text-purple-700">AIML HOD</td>
+                  <td>
+                    <code className="font-mono bg-purple-50 text-purple-800 px-1 py-0.5 rounded font-semibold">hod_aiml</code>
+                  </td>
+                  <td>
+                    <code className="font-mono text-slate-500">hod123</code>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="rounded bg-purple-100 px-2 py-1 font-semibold text-purple-800 hover:bg-purple-200 transition shadow-sm"
+                      onClick={() => {
+                        setRole("hod");
+                        setMode("login");
+                        setIdentifier("hod_aiml");
+                        setPassword("hod123");
+                        setError(null);
+                      }}
+                    >
+                      Use →
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 font-medium text-indigo-700">CSE HOD</td>
                   <td>
                     <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">hod_cse</code>
                   </td>

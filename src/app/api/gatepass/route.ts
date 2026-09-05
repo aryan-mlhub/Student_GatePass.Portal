@@ -217,6 +217,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ passes });
   }
 
+function isDeptMatch(userDept?: string | null, passDept?: string | null): boolean {
+  if (!userDept || !passDept) return true;
+  const a = userDept.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const b = passDept.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (a === b) return true;
+  const isAimlA = a.includes("ai") || a.includes("aiml") || a.includes("artificial");
+  const isAimlB = b.includes("ai") || b.includes("aiml") || b.includes("artificial");
+  if (isAimlA && isAimlB) return true;
+  const isCseA = a.includes("computer") || a.includes("cse");
+  const isCseB = b.includes("computer") || b.includes("cse");
+  if (isCseA && isCseB && !isAimlA && !isAimlB) return true;
+  return false;
+}
+
   if (scope === "mentor") {
     if (session.role !== "mentor" && session.role !== "admin" && session.role !== "hod") {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -224,7 +238,7 @@ export async function GET(req: NextRequest) {
     const passes = mockStore.gatePasses.filter((p) => {
       if (p.status !== "pending_mentor") return false;
       if (session.role === "mentor" && !allDept && session.department) {
-        if (p.department.toLowerCase() !== session.department.toLowerCase()) return false;
+        if (!isDeptMatch(session.department, p.department)) return false;
       }
       return true;
     });
@@ -237,7 +251,7 @@ export async function GET(req: NextRequest) {
     }
     const passes = mockStore.gatePasses.filter((p) => {
       if (p.status !== "pending_hod") return false;
-      if (session.role === "hod" && session.department && p.department.toLowerCase() !== session.department.toLowerCase()) {
+      if (session.role === "hod" && session.department && !isDeptMatch(session.department, p.department)) {
         return false;
       }
       return true;
@@ -257,7 +271,7 @@ export async function GET(req: NextRequest) {
     if (session.role === "mentor" || session.role === "hod" || session.role === "admin") {
       const passes = mockStore.gatePasses.filter((p) => {
         if (p.status !== "approved") return false;
-        if (session.role !== "admin" && session.department && p.department.toLowerCase() !== session.department.toLowerCase()) {
+        if (session.role !== "admin" && session.department && !isDeptMatch(session.department, p.department)) {
           return false;
         }
         return true;

@@ -299,18 +299,32 @@ export async function ensureSeeded() {
     // HOD for each department
     for (const dept of DEPARTMENTS) {
       const hash = await hashPassword("hod123");
+      const hodName = dept.short === "AIML" ? "Dr. Sarah Connor (HOD AIML)" : `Dr. ${dept.short} HOD`;
+      const deptName = dept.short === "AIML" ? "CSE (AI&ML)" : dept.name;
       await db.insert(users).values({
         role: "hod",
-        name: `Dr. ${dept.short} HOD`,
+        name: hodName,
         identifier: `hod_${dept.short.toLowerCase()}`,
         passwordHash: hash,
-        managedDepartment: dept.name,
+        managedDepartment: deptName,
       });
     }
 
-    // Mentors — one per (department, semester, section) for CSE only to keep manageable
+    // Mentors — designated mentors for CSE & AIML
+    const mentorHash = await hashPassword("mentor123");
+    await db.insert(users).values({
+      role: "mentor",
+      name: "Prof. S. Patil (Mentor Sec B)",
+      identifier: "mentor_cse_3_b",
+      passwordHash: mentorHash,
+      managedDepartment: "CSE (AI&ML)",
+      managedSemester: 3,
+      managedSection: "B",
+    });
+
     for (const sem of [3, 5, 7]) {
       for (const sec of SECTIONS) {
+        if (sem === 3 && sec === "B") continue; // already seeded above
         const hash = await hashPassword("mentor123");
         await db.insert(users).values({
           role: "mentor",

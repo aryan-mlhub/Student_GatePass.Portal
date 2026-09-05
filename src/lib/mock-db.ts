@@ -142,10 +142,26 @@ if (!globalStore.__gpMockStore) {
     {
       id: 2,
       role: "hod",
-      name: "Dr. Sarah Connor (HOD CSE)",
-      identifier: "hod_cse",
+      name: "Dr. Sarah Connor (HOD AIML)",
+      identifier: "hod_aiml",
       managedDepartment: "CSE (AI&ML)",
       phone: "+919876543201",
+    } as any,
+    {
+      id: 20,
+      role: "hod",
+      name: "Dr. Sarah Connor (HOD AIML)",
+      identifier: "hod_ai",
+      managedDepartment: "CSE (AI&ML)",
+      phone: "+919876543201",
+    } as any,
+    {
+      id: 21,
+      role: "hod",
+      name: "Dr. Rajesh Rao (HOD CSE)",
+      identifier: "hod_cse",
+      managedDepartment: "Computer Science & Engineering",
+      phone: "+919876543202",
     } as any,
     {
       id: 3,
