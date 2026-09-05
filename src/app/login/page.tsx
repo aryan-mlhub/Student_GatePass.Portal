@@ -321,15 +321,13 @@ function LoginInner() {
                 label="Full Name"
                 value={name}
                 onChange={setName}
-                placeholder="As printed on roll list"
-                disabled={!!rollHint?.exists}
+                placeholder="Enter your full name"
               />
               <Field
                 label="Parent Phone Number"
                 value={parentPhone}
                 onChange={setParentPhone}
                 placeholder="+91XXXXXXXXXX"
-                disabled={!!rollHint?.exists}
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field

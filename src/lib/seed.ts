@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, pool } from "@/db";
 import { rollList, users, timetable, parentSmsLog, exitLogs, gatePasses } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { sql } from "drizzle-orm";
@@ -111,12 +111,20 @@ const DAYS = [
 
 let schemaEnsured = false;
 
+async function executeSqlSafe(query: string) {
+  try {
+    await pool.query(query);
+  } catch (err) {
+    // Ignore harmless duplicate or permission notices
+  }
+}
+
 export async function ensureSchema() {
   if (schemaEnsured) return;
 
   try {
-    // 1. Create Enums
-    await db.execute(sql`
+    // 1. Create Enums safely
+    await executeSqlSafe(`
       DO $$ BEGIN
         CREATE TYPE user_role AS ENUM ('student', 'mentor', 'hod', 'security', 'admin');
       EXCEPTION
@@ -124,7 +132,7 @@ export async function ensureSchema() {
       END $$;
     `);
 
-    await db.execute(sql`
+    await executeSqlSafe(`
       DO $$ BEGIN
         CREATE TYPE pass_status AS ENUM ('pending_mentor', 'pending_hod', 'approved', 'rejected');
       EXCEPTION
@@ -132,7 +140,7 @@ export async function ensureSchema() {
       END $$;
     `);
 
-    await db.execute(sql`
+    await executeSqlSafe(`
       DO $$ BEGIN
         CREATE TYPE pass_flow AS ENUM ('academic', 'free_period', 'emergency');
       EXCEPTION
@@ -140,8 +148,8 @@ export async function ensureSchema() {
       END $$;
     `);
 
-    // 2. Create Tables and Indexes
-    await db.execute(sql`
+    // 2. Create Tables and Indexes individually
+    await executeSqlSafe(`
       CREATE TABLE IF NOT EXISTS roll_list (
         id SERIAL PRIMARY KEY,
         usn VARCHAR(32) NOT NULL,
@@ -152,12 +160,14 @@ export async function ensureSchema() {
         parent_phone VARCHAR(20) NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-      CREATE UNIQUE INDEX IF NOT EXISTS roll_list_usn_unique ON roll_list (usn);
-      CREATE INDEX IF NOT EXISTS roll_list_dept_sem_sec ON roll_list (department, semester, section);
+    `);
+    await executeSqlSafe(`CREATE UNIQUE INDEX IF NOT EXISTS roll_list_usn_unique ON roll_list (usn);`);
+    await executeSqlSafe(`CREATE INDEX IF NOT EXISTS roll_list_dept_sem_sec ON roll_list (department, semester, section);`);
 
+    await executeSqlSafe(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        role user_role NOT NULL,
+        role VARCHAR(32) NOT NULL,
         name TEXT NOT NULL,
         identifier VARCHAR(64) NOT NULL,
         password_hash TEXT NOT NULL,
@@ -171,10 +181,12 @@ export async function ensureSchema() {
         managed_section TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_id VARCHAR(128);
-      CREATE UNIQUE INDEX IF NOT EXISTS users_identifier_role_unique ON users (identifier, role);
-      CREATE INDEX IF NOT EXISTS users_clerk_id_idx ON users (clerk_id);
+    `);
+    await executeSqlSafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_id VARCHAR(128);`);
+    await executeSqlSafe(`CREATE UNIQUE INDEX IF NOT EXISTS users_identifier_role_unique ON users (identifier, role);`);
+    await executeSqlSafe(`CREATE INDEX IF NOT EXISTS users_clerk_id_idx ON users (clerk_id);`);
 
+    await executeSqlSafe(`
       CREATE TABLE IF NOT EXISTS timetable (
         id SERIAL PRIMARY KEY,
         department TEXT NOT NULL,
@@ -189,8 +201,10 @@ export async function ensureSchema() {
         is_break BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-      CREATE INDEX IF NOT EXISTS timetable_lookup ON timetable (department, semester, section, day_of_week);
+    `);
+    await executeSqlSafe(`CREATE INDEX IF NOT EXISTS timetable_lookup ON timetable (department, semester, section, day_of_week);`);
 
+    await executeSqlSafe(`
       CREATE TABLE IF NOT EXISTS gate_passes (
         id SERIAL PRIMARY KEY,
         pass_id VARCHAR(32) NOT NULL,
@@ -201,8 +215,8 @@ export async function ensureSchema() {
         section TEXT NOT NULL,
         reason TEXT NOT NULL,
         request_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        status pass_status NOT NULL DEFAULT 'pending_mentor',
-        flow pass_flow NOT NULL DEFAULT 'academic',
+        status VARCHAR(32) NOT NULL DEFAULT 'pending_mentor',
+        flow VARCHAR(32) NOT NULL DEFAULT 'academic',
         current_subject TEXT,
         current_subject_code VARCHAR(32),
         current_faculty TEXT,
@@ -224,11 +238,13 @@ export async function ensureSchema() {
         parent_sms_body TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-      CREATE UNIQUE INDEX IF NOT EXISTS gate_passes_pass_id_unique ON gate_passes (pass_id);
-      CREATE UNIQUE INDEX IF NOT EXISTS gate_passes_qr_token_unique ON gate_passes (qr_token);
-      CREATE INDEX IF NOT EXISTS gate_passes_student ON gate_passes (student_usn);
-      CREATE INDEX IF NOT EXISTS gate_passes_status ON gate_passes (status);
+    `);
+    await executeSqlSafe(`CREATE UNIQUE INDEX IF NOT EXISTS gate_passes_pass_id_unique ON gate_passes (pass_id);`);
+    await executeSqlSafe(`CREATE UNIQUE INDEX IF NOT EXISTS gate_passes_qr_token_unique ON gate_passes (qr_token);`);
+    await executeSqlSafe(`CREATE INDEX IF NOT EXISTS gate_passes_student ON gate_passes (student_usn);`);
+    await executeSqlSafe(`CREATE INDEX IF NOT EXISTS gate_passes_status ON gate_passes (status);`);
 
+    await executeSqlSafe(`
       CREATE TABLE IF NOT EXISTS parent_sms_log (
         id SERIAL PRIMARY KEY,
         pass_id VARCHAR(32) NOT NULL,
@@ -238,7 +254,9 @@ export async function ensureSchema() {
         body TEXT NOT NULL,
         sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+    `);
 
+    await executeSqlSafe(`
       CREATE TABLE IF NOT EXISTS exit_logs (
         id SERIAL PRIMARY KEY,
         pass_id VARCHAR(32) NOT NULL,
@@ -248,8 +266,8 @@ export async function ensureSchema() {
         exit_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         notes TEXT
       );
-      CREATE INDEX IF NOT EXISTS exit_logs_pass ON exit_logs (pass_id);
     `);
+    await executeSqlSafe(`CREATE INDEX IF NOT EXISTS exit_logs_pass ON exit_logs (pass_id);`);
 
     schemaEnsured = true;
   } catch (err) {

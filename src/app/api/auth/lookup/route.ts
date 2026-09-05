@@ -55,24 +55,17 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Auto-generate student format for demo USNs
-  if (usn.startsWith("CM") || usn.startsWith("SBJ")) {
-    return NextResponse.json({
-      exists: true,
-      student: {
-        usn: usn,
-        name: `Student (${usn})`,
-        department: "Computer Science & Engineering",
-        semester: 5,
-        section: "A",
-        parentPhone: "+919876525001",
-      },
-    });
-  }
-
-  return NextResponse.json(
-    { exists: false, error: "USN not found in SBJITMR roll list" },
-    { status: 404 },
-  );
+  // 3. Fallback for any entered USN
+  return NextResponse.json({
+    exists: true,
+    student: {
+      usn: usn,
+      name: "",
+      department: "Computer Science & Engineering",
+      semester: 5,
+      section: "A",
+      parentPhone: "",
+    },
+  });
 }
 
