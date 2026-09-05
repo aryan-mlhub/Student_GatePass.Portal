@@ -29,11 +29,20 @@ export async function POST(req: NextRequest) {
   // 1. Try PostgreSQL authentication
   try {
     await ensureSeeded();
-    const rows = await db
+    let rows = await db
       .select()
       .from(users)
       .where(and(eq(users.identifier, identifier), eq(users.role, role)))
       .limit(1);
+
+    if (!rows[0]) {
+      rows = await db
+        .select()
+        .from(users)
+        .where(eq(users.identifier, identifier))
+        .limit(1);
+    }
+
     const user = rows[0];
     if (user) {
       const ok = await verifyPassword(password, user.passwordHash);
@@ -67,11 +76,17 @@ export async function POST(req: NextRequest) {
   }
 
   // 2. Fallback to in-memory mock store
-  const mockUser = mockStore.users.find(
+  let mockUser = mockStore.users.find(
     (u) =>
       u.identifier.toLowerCase() === identifier.toLowerCase() &&
       u.role === role,
   );
+
+  if (!mockUser) {
+    mockUser = mockStore.users.find(
+      (u) => u.identifier.toLowerCase() === identifier.toLowerCase(),
+    );
+  }
 
   // Accept standard passwords (student123, mentor123, hod123, security123, admin123) or any demo login
   if (mockUser) {

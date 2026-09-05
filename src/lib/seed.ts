@@ -124,29 +124,9 @@ export async function ensureSchema() {
 
   try {
     // 1. Create Enums safely
-    await executeSqlSafe(`
-      DO $$ BEGIN
-        CREATE TYPE user_role AS ENUM ('student', 'mentor', 'hod', 'security', 'admin');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `);
-
-    await executeSqlSafe(`
-      DO $$ BEGIN
-        CREATE TYPE pass_status AS ENUM ('pending_mentor', 'pending_hod', 'approved', 'rejected');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `);
-
-    await executeSqlSafe(`
-      DO $$ BEGIN
-        CREATE TYPE pass_flow AS ENUM ('academic', 'free_period', 'emergency');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `);
+    await executeSqlSafe(`CREATE TYPE user_role AS ENUM ('student', 'mentor', 'hod', 'security', 'admin');`);
+    await executeSqlSafe(`CREATE TYPE pass_status AS ENUM ('pending_mentor', 'pending_hod', 'approved', 'rejected');`);
+    await executeSqlSafe(`CREATE TYPE pass_flow AS ENUM ('academic', 'free_period', 'emergency');`);
 
     // 2. Create Tables and Indexes individually
     await executeSqlSafe(`
