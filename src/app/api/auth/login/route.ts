@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { users } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import {
@@ -26,10 +26,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 1. Try PostgreSQL authentication
-  try {
-    await ensureSeeded();
-    let rows = await db
+  // 1. Try PostgreSQL authentication if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      await ensureSeeded();
+      let rows = await db
       .select()
       .from(users)
       .where(and(eq(users.identifier, identifier), eq(users.role, role)))
@@ -43,37 +44,38 @@ export async function POST(req: NextRequest) {
         .limit(1);
     }
 
-    const user = rows[0];
-    if (user) {
-      const ok = await verifyPassword(password, user.passwordHash);
-      if (ok) {
-        const token = await createSessionToken({
-          uid: user.id,
-          role: user.role as Role,
-          name: user.name,
-          identifier: user.identifier,
-          department: user.department ?? user.managedDepartment,
-          semester: user.semester ?? user.managedSemester,
-          section: user.section ?? user.managedSection,
-        });
-        await setSessionCookie(token);
-        return NextResponse.json({
-          ok: true,
-          user: {
-            id: user.id,
-            role: user.role,
-            name: user.name,
-            identifier: user.identifier,
-            department: user.department,
-            semester: user.semester,
-            section: user.section,
-          },
-        });
+        const user = rows[0];
+        if (user) {
+          const ok = await verifyPassword(password, user.passwordHash);
+          if (ok) {
+            const token = await createSessionToken({
+              uid: user.id,
+              role: user.role as Role,
+              name: user.name,
+              identifier: user.identifier,
+              department: user.department ?? user.managedDepartment,
+              semester: user.semester ?? user.managedSemester,
+              section: user.section ?? user.managedSection,
+            });
+            await setSessionCookie(token);
+            return NextResponse.json({
+              ok: true,
+              user: {
+                id: user.id,
+                role: user.role,
+                name: user.name,
+                identifier: user.identifier,
+                department: user.department,
+                semester: user.semester,
+                section: user.section,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[DB Login Notice - Using Memory Store Fallback]", err);
       }
     }
-  } catch (err) {
-    console.warn("[DB Login Notice - Using Memory Store Fallback]", err);
-  }
 
   // 2. Fallback to in-memory mock store
   let mockUser = mockStore.users.find(

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { gatePasses } from "@/db/schema";
 import { and, eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
@@ -39,31 +39,33 @@ export async function POST(req: NextRequest) {
   const status = flow === "academic" ? "pending_mentor" : "pending_hod";
   const passId = `GP-${new Date().getFullYear()}-${nanoid(8).toUpperCase()}`;
 
-  // 1. Try DB
-  try {
-    await ensureSeeded();
-    const inserted = await db
-      .insert(gatePasses)
-      .values({
-        passId,
-        studentUsn: session.identifier,
-        studentName: session.name,
-        department: session.department,
-        semester: session.semester,
-        section: session.section,
-        reason,
-        flow,
-        status,
-        currentSubject: slot?.subjectName ?? null,
-        currentSubjectCode: slot?.subjectCode ?? null,
-        currentFaculty: slot?.facultyName ?? null,
-        slotStart: slot?.startTime ?? null,
-        slotEnd: slot?.endTime ?? null,
-      })
-      .returning();
-    return NextResponse.json({ pass: inserted[0] });
-  } catch (err) {
-    console.warn("[GatePass POST DB Notice] Using memory store fallback.", err);
+  // 1. Try DB if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      await ensureSeeded();
+      const inserted = await db
+        .insert(gatePasses)
+        .values({
+          passId,
+          studentUsn: session.identifier,
+          studentName: session.name,
+          department: session.department,
+          semester: session.semester,
+          section: session.section,
+          reason,
+          flow,
+          status,
+          currentSubject: slot?.subjectName ?? null,
+          currentSubjectCode: slot?.subjectCode ?? null,
+          currentFaculty: slot?.facultyName ?? null,
+          slotStart: slot?.startTime ?? null,
+          slotEnd: slot?.endTime ?? null,
+        })
+        .returning();
+      return NextResponse.json({ pass: inserted[0] });
+    } catch (err) {
+      console.warn("[GatePass POST DB Notice] Using memory store fallback.", err);
+    }
   }
 
   // 2. Fallback to mockStore
@@ -97,17 +99,18 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const scope = req.nextUrl.searchParams.get("scope") || "mine";
 
-  // 1. Try DB
-  try {
-    await ensureSeeded();
-    if (scope === "mine") {
-      const rows = await db
-        .select()
-        .from(gatePasses)
-        .where(eq(gatePasses.studentUsn, session.identifier))
-        .orderBy(desc(gatePasses.requestTimestamp));
-      return NextResponse.json({ passes: rows });
-    }
+  // 1. Try DB if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      await ensureSeeded();
+      if (scope === "mine") {
+        const rows = await db
+          .select()
+          .from(gatePasses)
+          .where(eq(gatePasses.studentUsn, session.identifier))
+          .orderBy(desc(gatePasses.requestTimestamp));
+        return NextResponse.json({ passes: rows });
+      }
     if (scope === "mentor") {
       if (session.role !== "mentor" && session.role !== "admin" && session.role !== "hod") {
         return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -188,11 +191,11 @@ export async function GET(req: NextRequest) {
           .orderBy(desc(gatePasses.requestTimestamp));
         return NextResponse.json({ passes: rows });
       }
-      return NextResponse.json({ passes: [] });
     }
   } catch (err) {
     console.warn("[GatePass GET DB Notice] Using memory store fallback.", err);
   }
+}
 
   // 2. Fallback to mockStore
   if (scope === "mine") {

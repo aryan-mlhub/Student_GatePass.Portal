@@ -1,4 +1,4 @@
-import { db, pool } from "@/db";
+import { db, pool, isDatabaseConfigured } from "@/db";
 import { rollList, users, timetable, parentSmsLog, exitLogs, gatePasses } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { sql } from "drizzle-orm";
@@ -121,6 +121,10 @@ async function executeSqlSafe(query: string) {
 
 export async function ensureSchema() {
   if (schemaEnsured) return;
+  if (process.env.NODE_ENV === "production" && !isDatabaseConfigured) {
+    schemaEnsured = true;
+    return;
+  }
 
   try {
     // 1. Create Enums safely
@@ -256,6 +260,9 @@ export async function ensureSchema() {
 }
 
 export async function ensureSeeded() {
+  if (process.env.NODE_ENV === "production" && !isDatabaseConfigured) {
+    return;
+  }
   try {
     // Ensure tables and types exist first
     await ensureSchema();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { gatePasses, parentSmsLog, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
@@ -34,16 +34,18 @@ export async function GET(
 
   let pass: any = null;
 
-  // 1. Try DB
-  try {
-    const rows = await db
-      .select()
-      .from(gatePasses)
-      .where(eq(gatePasses.passId, id))
-      .limit(1);
-    pass = rows[0];
-  } catch (err) {
-    console.warn("[GatePass GET ID DB Notice] Using memory store fallback.", err);
+  // 1. Try DB if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      const rows = await db
+        .select()
+        .from(gatePasses)
+        .where(eq(gatePasses.passId, id))
+        .limit(1);
+      pass = rows[0];
+    } catch (err) {
+      console.warn("[GatePass GET ID DB Notice] Using memory store fallback.", err);
+    }
   }
 
   // 2. Fallback to mockStore
@@ -85,19 +87,21 @@ export async function PATCH(
   const comment = (body.comment as string | undefined) || null;
 
   let pass: any = null;
-  let useMock = false;
+  let useMock = !isDatabaseConfigured && process.env.NODE_ENV === "production";
 
-  // 1. Try DB
-  try {
-    const rows = await db
-      .select()
-      .from(gatePasses)
-      .where(eq(gatePasses.passId, id))
-      .limit(1);
-    pass = rows[0];
-  } catch (err) {
-    console.warn("[GatePass PATCH ID DB Notice] Using memory store fallback.", err);
-    useMock = true;
+  // 1. Try DB if configured
+  if (!useMock) {
+    try {
+      const rows = await db
+        .select()
+        .from(gatePasses)
+        .where(eq(gatePasses.passId, id))
+        .limit(1);
+      pass = rows[0];
+    } catch (err) {
+      console.warn("[GatePass PATCH ID DB Notice] Using memory store fallback.", err);
+      useMock = true;
+    }
   }
 
   if (!pass) {

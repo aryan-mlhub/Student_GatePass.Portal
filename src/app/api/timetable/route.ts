@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { timetable } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
@@ -24,21 +24,23 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // 1. Try DB
-  try {
-    await ensureSeeded();
-    const conds = [
-      eq(timetable.department, department),
-      eq(timetable.semester, parseInt(semester, 10)),
-      eq(timetable.section, section),
-    ];
-    if (day) conds.push(eq(timetable.dayOfWeek, day));
-    const rows = await db.select().from(timetable).where(and(...conds));
-    if (rows && rows.length > 0) {
-      return NextResponse.json({ entries: rows });
+  // 1. Try DB if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      await ensureSeeded();
+      const conds = [
+        eq(timetable.department, department),
+        eq(timetable.semester, parseInt(semester, 10)),
+        eq(timetable.section, section),
+      ];
+      if (day) conds.push(eq(timetable.dayOfWeek, day));
+      const rows = await db.select().from(timetable).where(and(...conds));
+      if (rows && rows.length > 0) {
+        return NextResponse.json({ entries: rows });
+      }
+    } catch (err) {
+      console.warn("[Timetable GET DB Notice] Using memory store fallback.", err);
     }
-  } catch (err) {
-    console.warn("[Timetable GET DB Notice] Using memory store fallback.", err);
   }
 
   // 2. Fallback to mockStore
@@ -92,27 +94,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 1. Try DB
-  try {
-    await ensureSeeded();
-    const inserted = await db
-      .insert(timetable)
-      .values({
-        department: body.department,
-        semester: parseInt(body.semester, 10),
-        section: body.section,
-        dayOfWeek: body.dayOfWeek,
-        startTime: body.startTime,
-        endTime: body.endTime,
-        subjectName: body.subjectName,
-        subjectCode: body.subjectCode,
-        facultyName: body.facultyName,
-        isBreak: !!body.isBreak,
-      })
-      .returning();
-    return NextResponse.json({ entry: inserted[0] });
-  } catch (err) {
-    console.warn("[Timetable POST DB Notice] Using memory store fallback.", err);
+  // 1. Try DB if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      await ensureSeeded();
+      const inserted = await db
+        .insert(timetable)
+        .values({
+          department: body.department,
+          semester: parseInt(body.semester, 10),
+          section: body.section,
+          dayOfWeek: body.dayOfWeek,
+          startTime: body.startTime,
+          endTime: body.endTime,
+          subjectName: body.subjectName,
+          subjectCode: body.subjectCode,
+          facultyName: body.facultyName,
+          isBreak: !!body.isBreak,
+        })
+        .returning();
+      return NextResponse.json({ entry: inserted[0] });
+    } catch (err) {
+      console.warn("[Timetable POST DB Notice] Using memory store fallback.", err);
+    }
   }
 
   // 2. Fallback to mockStore

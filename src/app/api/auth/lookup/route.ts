@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { rollList } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { ensureSeeded } from "@/lib/seed";
@@ -14,29 +14,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "USN required" }, { status: 400 });
   }
 
-  // 1. Try DB
-  try {
-    await ensureSeeded();
-    const rows = await db
-      .select()
-      .from(rollList)
-      .where(eq(rollList.usn, usn))
-      .limit(1);
-    if (rows[0]) {
-      return NextResponse.json({
-        exists: true,
-        student: {
-          usn: rows[0].usn,
-          name: rows[0].studentName,
-          department: rows[0].department,
-          semester: rows[0].semester,
-          section: rows[0].section,
-          parentPhone: rows[0].parentPhone,
-        },
-      });
+  // 1. Try DB if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      await ensureSeeded();
+      const rows = await db
+        .select()
+        .from(rollList)
+        .where(eq(rollList.usn, usn))
+        .limit(1);
+      if (rows[0]) {
+        return NextResponse.json({
+          exists: true,
+          student: {
+            usn: rows[0].usn,
+            name: rows[0].studentName,
+            department: rows[0].department,
+            semester: rows[0].semester,
+            section: rows[0].section,
+            parentPhone: rows[0].parentPhone,
+          },
+        });
+      }
+    } catch (e) {
+      console.warn("[Lookup DB notice]", e);
     }
-  } catch (e) {
-    console.warn("[Lookup DB notice]", e);
   }
 
   // 2. Fallback to Mock Store

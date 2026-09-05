@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { parentSmsLog } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
@@ -18,17 +18,19 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  try {
-    const rows = await db
-      .select()
-      .from(parentSmsLog)
-      .orderBy(desc(parentSmsLog.sentAt))
-      .limit(50);
-    if (rows && rows.length > 0) {
-      return NextResponse.json({ logs: rows });
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      const rows = await db
+        .select()
+        .from(parentSmsLog)
+        .orderBy(desc(parentSmsLog.sentAt))
+        .limit(50);
+      if (rows && rows.length > 0) {
+        return NextResponse.json({ logs: rows });
+      }
+    } catch (err) {
+      console.warn("[ParentSmsLog DB Notice] Using memory store fallback.", err);
     }
-  } catch (err) {
-    console.warn("[ParentSmsLog DB Notice] Using memory store fallback.", err);
   }
 
   return NextResponse.json({ logs: mockStore.parentSmsLogs });

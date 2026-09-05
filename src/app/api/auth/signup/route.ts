@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { users, rollList } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
@@ -40,9 +40,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Try PostgreSQL Registration
-    try {
-      await ensureSeeded();
+    // 1. Try PostgreSQL Registration if configured
+    if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+      try {
+        await ensureSeeded();
 
       // Check if user already exists
       const existing = await db
@@ -133,8 +134,9 @@ export async function POST(req: NextRequest) {
     } catch (dbErr) {
       console.warn("[Signup DB Notice] Falling back to memory store.", dbErr);
     }
+  }
 
-    // 2. Fallback to mockStore
+  // 2. Fallback to mockStore
     let mockRoll = mockStore.rollList.find((r) => r.usn.toUpperCase() === usn);
     if (!mockRoll) {
       mockRoll = {

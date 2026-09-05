@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { gatePasses } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
@@ -13,16 +13,18 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  try {
-    const rows = await db
-      .select()
-      .from(gatePasses)
-      .orderBy(desc(gatePasses.requestTimestamp));
-    if (rows && rows.length > 0) {
-      return NextResponse.json({ passes: rows });
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      const rows = await db
+        .select()
+        .from(gatePasses)
+        .orderBy(desc(gatePasses.requestTimestamp));
+      if (rows && rows.length > 0) {
+        return NextResponse.json({ passes: rows });
+      }
+    } catch (err) {
+      console.warn("[Admin Passes DB Notice] Using memory store fallback.", err);
     }
-  } catch (err) {
-    console.warn("[Admin Passes DB Notice] Using memory store fallback.", err);
   }
 
   return NextResponse.json({ passes: mockStore.gatePasses });

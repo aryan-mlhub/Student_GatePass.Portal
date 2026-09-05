@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { timetable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
@@ -37,18 +37,20 @@ export async function PATCH(
 
   const numId = parseInt(id, 10);
 
-  // 1. Try DB
-  try {
-    const updated = await db
-      .update(timetable)
-      .set(updates)
-      .where(eq(timetable.id, numId))
-      .returning();
-    if (updated[0]) {
-      return NextResponse.json({ entry: updated[0] });
+  // 1. Try DB if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      const updated = await db
+        .update(timetable)
+        .set(updates)
+        .where(eq(timetable.id, numId))
+        .returning();
+      if (updated[0]) {
+        return NextResponse.json({ entry: updated[0] });
+      }
+    } catch (err) {
+      console.warn("[Timetable PATCH ID DB Notice] Using memory store fallback.", err);
     }
-  } catch (err) {
-    console.warn("[Timetable PATCH ID DB Notice] Using memory store fallback.", err);
   }
 
   // 2. Fallback to mockStore
@@ -76,17 +78,19 @@ export async function DELETE(
 
   const numId = parseInt(id, 10);
 
-  // 1. Try DB
-  try {
-    const deleted = await db
-      .delete(timetable)
-      .where(eq(timetable.id, numId))
-      .returning();
-    if (deleted[0]) {
-      return NextResponse.json({ ok: true });
+  // 1. Try DB if configured
+  if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
+    try {
+      const deleted = await db
+        .delete(timetable)
+        .where(eq(timetable.id, numId))
+        .returning();
+      if (deleted[0]) {
+        return NextResponse.json({ ok: true });
+      }
+    } catch (err) {
+      console.warn("[Timetable DELETE ID DB Notice] Using memory store fallback.", err);
     }
-  } catch (err) {
-    console.warn("[Timetable DELETE ID DB Notice] Using memory store fallback.", err);
   }
 
   // 2. Fallback to mockStore

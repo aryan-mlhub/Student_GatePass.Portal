@@ -62,7 +62,8 @@ function LoginInner() {
       setRollHint(null);
       return;
     }
-    if (usn.length < 6) {
+    const cleanUsn = usn.trim().toUpperCase();
+    if (cleanUsn.length < 3) {
       setRollHint(null);
       return;
     }
@@ -71,22 +72,34 @@ function LoginInner() {
     const t = setTimeout(async () => {
       try {
         const r = await fetch(
-          `/api/auth/lookup?usn=${encodeURIComponent(usn.toUpperCase())}`,
+          `/api/auth/lookup?usn=${encodeURIComponent(cleanUsn)}`,
         );
         const data = await r.json();
         if (alive) {
           setRollHint(data);
-          if (data.student) {
-            setName(data.student.name);
-            setParentPhone(data.student.parentPhone);
+          if (data?.student) {
+            if (data.student.name) setName(data.student.name);
+            if (data.student.parentPhone) setParentPhone(data.student.parentPhone);
           }
         }
       } catch {
-        if (alive) setRollHint({ exists: false });
+        if (alive) {
+          setRollHint({
+            exists: true,
+            student: {
+              usn: cleanUsn,
+              name: "",
+              department: "Computer Science & Engineering",
+              semester: 5,
+              section: "A",
+              parentPhone: "",
+            },
+          });
+        }
       } finally {
         if (alive) setLooking(false);
       }
-    }, 350);
+    }, 250);
     return () => {
       alive = false;
       clearTimeout(t);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { gatePasses, exitLogs } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
@@ -48,20 +48,22 @@ export async function POST(req: NextRequest) {
   }
 
   let pass: any = null;
-  let useMock = false;
+  let useMock = !isDatabaseConfigured && process.env.NODE_ENV === "production";
 
-  // 1. Try DB
-  try {
-    await ensureSeeded();
-    const rows = await db
-      .select()
-      .from(gatePasses)
-      .where(eq(gatePasses.passId, passId))
-      .limit(1);
-    pass = rows[0];
-  } catch (err) {
-    console.warn("[GatePass Scan DB Notice] Using memory store fallback.", err);
-    useMock = true;
+  // 1. Try DB if configured
+  if (!useMock) {
+    try {
+      await ensureSeeded();
+      const rows = await db
+        .select()
+        .from(gatePasses)
+        .where(eq(gatePasses.passId, passId))
+        .limit(1);
+      pass = rows[0];
+    } catch (err) {
+      console.warn("[GatePass Scan DB Notice] Using memory store fallback.", err);
+      useMock = true;
+    }
   }
 
   // 2. Fallback to mockStore
