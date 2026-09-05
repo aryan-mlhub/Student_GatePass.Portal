@@ -312,24 +312,55 @@ function LoginInner() {
                 label="SBJITMR USN"
                 value={usn}
                 onChange={(v) => setUsn(v.toUpperCase())}
-                placeholder="SBJ23CSE001"
+                placeholder="CM25001 or SBJ23CSE001"
+                list="usn-datalist"
                 hint={
                   looking
                     ? "Checking roll list…"
                     : rollHint?.exists
-                      ? `✓ ${rollHint.student?.department} · Sem ${rollHint.student?.semester} · Sec ${rollHint.student?.section}`
-                      : rollHint && !rollHint.exists
-                        ? rollHint.error || "USN not in roll list"
-                        : "We will auto-fill your details from the SBJITMR roll list"
+                      ? `✓ ${rollHint.student?.department || "Computer Science & Engineering"} · Sem ${rollHint.student?.semester || 5} · Sec ${rollHint.student?.section || "A"}`
+                      : "💡 Type any institutional USN or click a quick-select chip below"
                 }
-                hintTone={
-                  rollHint?.exists
-                    ? "emerald"
-                    : rollHint && !rollHint.exists
-                      ? "rose"
-                      : "slate"
-                }
+                hintTone={rollHint?.exists ? "emerald" : "slate"}
               />
+
+              <datalist id="usn-datalist">
+                {SAMPLE_STUDENTS.map((s) => (
+                  <option key={s.usn} value={s.usn}>
+                    {s.name} ({s.dept} Sem {s.sem}-{s.sec})
+                  </option>
+                ))}
+              </datalist>
+
+              {/* Quick-fill USN chips */}
+              <div className="rounded-xl bg-slate-50 p-3 border border-slate-200/80">
+                <div className="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
+                  <span>⚡ Available Student Roll Numbers (Click to Auto-fill):</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {SAMPLE_STUDENTS.map((s) => (
+                    <button
+                      key={s.usn}
+                      type="button"
+                      onClick={() => {
+                        setUsn(s.usn);
+                        setName(s.name);
+                        setParentPhone(s.phone);
+                        setPassword("student123");
+                        setConfirmPassword("student123");
+                      }}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold border transition ${
+                        usn === s.usn
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300"
+                      }`}
+                    >
+                      {s.usn} · {s.name.split(" ")[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <Field
                 label="Full Name"
                 value={name}
@@ -419,64 +450,186 @@ function LoginInner() {
           </div>
 
           <div className="card p-6">
-            <div className="section-title">Demo accounts</div>
-            <table className="mt-3 w-full text-left text-sm">
-              <thead className="text-[11px] uppercase tracking-wider text-slate-500">
+            <div className="flex items-center justify-between">
+              <div className="section-title">Demo Accounts & Quick Login</div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                1-Click Ready
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Click &ldquo;Use&rdquo; on any account below to instantly fill credentials.
+            </p>
+            <table className="mt-3 w-full text-left text-xs">
+              <thead className="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-1">
                 <tr>
-                  <th className="py-1">Role</th>
-                  <th className="py-1">ID</th>
-                  <th className="py-1">Password</th>
+                  <th className="py-1.5 font-semibold">Role</th>
+                  <th className="py-1.5 font-semibold">Identifier</th>
+                  <th className="py-1.5 font-semibold">Password</th>
+                  <th className="py-1.5 font-semibold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="text-slate-700">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 <tr>
-                  <td className="py-1">Admin</td>
+                  <td className="py-2 font-medium text-emerald-700">Student 1</td>
                   <td>
-                    <code className="font-mono">admin</code>
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">CM25001</code>
                   </td>
                   <td>
-                    <code className="font-mono">admin123</code>
+                    <code className="font-mono text-slate-500">student123</code>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="rounded bg-emerald-50 px-2 py-1 font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                      onClick={() => {
+                        setRole("student");
+                        setMode("login");
+                        setIdentifier("CM25001");
+                        setPassword("student123");
+                        setError(null);
+                      }}
+                    >
+                      Use →
+                    </button>
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-1">HOD</td>
+                  <td className="py-2 font-medium text-emerald-700">Student 2</td>
                   <td>
-                    <code className="font-mono">hod_cse</code>
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">SBJ23CSE001</code>
                   </td>
                   <td>
-                    <code className="font-mono">hod123</code>
+                    <code className="font-mono text-slate-500">student123</code>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="rounded bg-emerald-50 px-2 py-1 font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                      onClick={() => {
+                        setRole("student");
+                        setMode("login");
+                        setIdentifier("SBJ23CSE001");
+                        setPassword("student123");
+                        setError(null);
+                      }}
+                    >
+                      Use →
+                    </button>
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-1">Mentor</td>
+                  <td className="py-2 font-medium text-indigo-700">Mentor</td>
                   <td>
-                    <code className="font-mono">mentor_cse_5_a</code>
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">mentor_cse_5_a</code>
                   </td>
                   <td>
-                    <code className="font-mono">mentor123</code>
+                    <code className="font-mono text-slate-500">mentor123</code>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="rounded bg-indigo-50 px-2 py-1 font-semibold text-indigo-700 hover:bg-indigo-100 transition"
+                      onClick={() => {
+                        setRole("mentor");
+                        setMode("login");
+                        setIdentifier("mentor_cse_5_a");
+                        setPassword("mentor123");
+                        setError(null);
+                      }}
+                    >
+                      Use →
+                    </button>
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-1">Security</td>
+                  <td className="py-2 font-medium text-indigo-700">HOD</td>
                   <td>
-                    <code className="font-mono">guard1</code>
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">hod_cse</code>
                   </td>
                   <td>
-                    <code className="font-mono">security123</code>
+                    <code className="font-mono text-slate-500">hod123</code>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="rounded bg-indigo-50 px-2 py-1 font-semibold text-indigo-700 hover:bg-indigo-100 transition"
+                      onClick={() => {
+                        setRole("hod");
+                        setMode("login");
+                        setIdentifier("hod_cse");
+                        setPassword("hod123");
+                        setError(null);
+                      }}
+                    >
+                      Use →
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 font-medium text-amber-700">Security</td>
+                  <td>
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">guard1</code>
+                  </td>
+                  <td>
+                    <code className="font-mono text-slate-500">security123</code>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="rounded bg-amber-50 px-2 py-1 font-semibold text-amber-700 hover:bg-amber-100 transition"
+                      onClick={() => {
+                        setRole("security");
+                        setMode("login");
+                        setIdentifier("guard1");
+                        setPassword("security123");
+                        setError(null);
+                      }}
+                    >
+                      Use →
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 font-medium text-slate-800">Admin</td>
+                  <td>
+                    <code className="font-mono bg-slate-100 px-1 py-0.5 rounded">admin</code>
+                  </td>
+                  <td>
+                    <code className="font-mono text-slate-500">admin123</code>
+                  </td>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="rounded bg-slate-100 px-2 py-1 font-semibold text-slate-800 hover:bg-slate-200 transition"
+                      onClick={() => {
+                        setRole("admin");
+                        setMode("login");
+                        setIdentifier("admin");
+                        setPassword("admin123");
+                        setError(null);
+                      }}
+                    >
+                      Use →
+                    </button>
                   </td>
                 </tr>
               </tbody>
             </table>
-            <p className="mt-4 text-xs text-slate-500">
-              For students, sign up first using a USN from the roll list (e.g.{" "}
-              <code className="rounded bg-slate-100 px-1">SBJ23CSE001</code>).
-            </p>
           </div>
         </div>
       </main>
     </div>
   );
 }
+
+const SAMPLE_STUDENTS = [
+  { usn: "CM25001", name: "Aaditya Sharma", dept: "CSE", sem: 5, sec: "A", phone: "+919876525001" },
+  { usn: "CM25002", name: "Aakash Verma", dept: "CSE", sem: 5, sec: "A", phone: "+919876525002" },
+  { usn: "CM25003", name: "Abhishek Kumar", dept: "CSE", sem: 5, sec: "A", phone: "+919876525003" },
+  { usn: "SBJ23CSE001", name: "Aarav Sharma", dept: "CSE", sem: 5, sec: "A", phone: "+919876500001" },
+  { usn: "SBJ23CSE002", name: "Aditi Verma", dept: "CSE", sem: 5, sec: "B", phone: "+919876500002" },
+  { usn: "SBJ23AIM001", name: "Priya Patel", dept: "AI&ML", sem: 3, sec: "B", phone: "+919876500003" },
+];
 
 function Field({
   label,
@@ -488,6 +641,7 @@ function Field({
   hint,
   hintTone = "slate",
   autoComplete,
+  list,
 }: {
   label: string;
   value: string;
@@ -495,9 +649,10 @@ function Field({
   placeholder?: string;
   type?: string;
   disabled?: boolean;
-  hint?: string;
+  hint?: React.ReactNode;
   hintTone?: "slate" | "emerald" | "rose";
   autoComplete?: string;
+  list?: string;
 }) {
   return (
     <label className="block">
@@ -509,13 +664,14 @@ function Field({
         placeholder={placeholder}
         disabled={disabled}
         autoComplete={autoComplete}
+        list={list}
         className="input mt-1.5 disabled:bg-slate-50 disabled:text-slate-500"
       />
       {hint && (
         <span
           className={`mt-1.5 block text-xs ${
             hintTone === "emerald"
-              ? "text-emerald-700"
+              ? "text-emerald-700 font-medium"
               : hintTone === "rose"
                 ? "text-rose-700"
                 : "text-slate-500"

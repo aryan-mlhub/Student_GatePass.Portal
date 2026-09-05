@@ -62,6 +62,18 @@ const DEPARTMENTS = [
 const SECTIONS = ["A", "B", "C"] as const;
 const SEMESTERS = [3, 4, 5, 6, 7, 8] as const;
 
+// Add institutional CM25 series
+for (let i = 1; i <= 10; i++) {
+  const num = String(i).padStart(3, "0");
+  ROLL_ROWS.push({
+    usn: `CM25${num}`,
+    name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+    dept: "Computer Science & Engineering",
+    sem: 5,
+    sec: "A",
+  });
+}
+
 for (const dept of DEPARTMENTS) {
   for (const sem of SEMESTERS) {
     for (const sec of SECTIONS) {
