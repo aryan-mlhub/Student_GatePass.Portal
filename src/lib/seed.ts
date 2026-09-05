@@ -2,6 +2,8 @@ import { db, pool, isDatabaseConfigured } from "@/db";
 import { rollList, users, timetable, parentSmsLog, exitLogs, gatePasses } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { sql } from "drizzle-orm";
+import studentsMaster from "@/data/students_master.json";
+import timetableSectionB from "@/data/timetable_section_b.json";
 
 const FIRST_NAMES = [
   "Aarav", "Aditi", "Akash", "Anjali", "Arjun", "Bhavna", "Chirag", "Diya",
@@ -23,6 +25,26 @@ function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+const DEPARTMENTS = [
+  { name: "Computer Science & Engineering", code: "CS", short: "CSE" },
+  { name: "Information Technology", code: "IT", short: "IT" },
+  { name: "Electronics & Communication", code: "EC", short: "ECE" },
+  { name: "Mechanical Engineering", code: "ME", short: "ME" },
+  { name: "Civil Engineering", code: "CV", short: "CIVIL" },
+  { name: "Electrical Engineering", code: "EE", short: "EEE" },
+  { name: "Artificial Intelligence & ML", code: "AI", short: "AIML" },
+];
+const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+const SECTIONS = ["A", "B", "C"];
+
+let usnCounter = 100;
+function nextUSN(deptName: string): string {
+  const dept = DEPARTMENTS.find((d) => d.name === deptName);
+  const code = dept?.code || "CS";
+  usnCounter++;
+  return `1MS22${code}${String(usnCounter % 1000).padStart(3, "0")}`;
+}
+
 const ROLL_ROWS: Array<{
   usn: string;
   name: string;
@@ -31,46 +53,14 @@ const ROLL_ROWS: Array<{
   sec: string;
 }> = [];
 
-let serialByDept: Record<string, number> = {};
-const DEPT_CODE: Record<string, string> = {
-  "Computer Science & Engineering": "CSE",
-  "Information Technology": "IT",
-  "Electronics & Communication": "ECE",
-  "Mechanical Engineering": "MEC",
-  "Civil Engineering": "CIV",
-  "Electrical Engineering": "EEE",
-  "Artificial Intelligence & ML": "AIM",
-};
-function nextUSN(dept: string) {
-  const code = DEPT_CODE[dept] ?? "GEN";
-  const year = "23";
-  serialByDept[dept] = (serialByDept[dept] ?? 0) + 1;
-  const serial = String(serialByDept[dept]).padStart(3, "0");
-  return `SBJ${year}${code}${serial}`;
-}
-
-const DEPARTMENTS = [
-  { name: "Computer Science & Engineering", short: "CSE" },
-  { name: "Information Technology", short: "IT" },
-  { name: "Electronics & Communication", short: "ECE" },
-  { name: "Mechanical Engineering", short: "MEC" },
-  { name: "Civil Engineering", short: "CIV" },
-  { name: "Electrical Engineering", short: "EEE" },
-  { name: "Artificial Intelligence & ML", short: "AIM" },
-];
-
-const SECTIONS = ["A", "B", "C"] as const;
-const SEMESTERS = [3, 4, 5, 6, 7, 8] as const;
-
-// Add institutional CM25 series
-for (let i = 1; i <= 10; i++) {
-  const num = String(i).padStart(3, "0");
+// 1. Seed all uploaded students from students_master.json
+for (const s of studentsMaster as Array<{ studentId: string; name: string; department?: string; semester?: number; section?: string }>) {
   ROLL_ROWS.push({
-    usn: `CM25${num}`,
-    name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
-    dept: "Computer Science & Engineering",
-    sem: 5,
-    sec: "A",
+    usn: s.studentId.toUpperCase(),
+    name: s.name,
+    dept: s.department || "CSE (AI&ML)",
+    sem: s.semester || 3,
+    sec: s.section || "B",
   });
 }
 
@@ -345,41 +335,42 @@ export async function ensureSeeded() {
       });
     }
 
-    // Timetables for CSE 5 A
+    // Timetables from timetable_section_b.json
     const tts: Array<typeof timetable.$inferInsert> = [];
-    for (const day of DAYS) {
-      for (const t of TIMETABLE_TEMPLATE) {
-        tts.push({
-          department: "Computer Science & Engineering",
-          semester: 5,
-          section: "A",
-          dayOfWeek: day,
-          startTime: t.start,
-          endTime: t.end,
-          subjectName: t.subject,
-          subjectCode: t.code,
-          facultyName: t.faculty,
-          isBreak: t.isBreak ?? false,
-        });
-      }
+
+    for (const item of timetableSectionB as Array<{ day: string; startTime: string; endTime: string; subject: string; subjectCode: string; faculty?: string; type: string }>) {
+      const day = item.day.toLowerCase();
+      const isBreak = item.type === "BREAK" || item.subjectCode === "LUNCH";
+
+      // 1. CSE (AI&ML) Sem 3 Sec B
+      tts.push({
+        department: "CSE (AI&ML)",
+        semester: 3,
+        section: "B",
+        dayOfWeek: day,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        subjectName: item.subject,
+        subjectCode: item.subjectCode,
+        facultyName: item.faculty || "-",
+        isBreak,
+      });
+
+      // 2. Computer Science & Engineering Sem 5 Sec A
+      tts.push({
+        department: "Computer Science & Engineering",
+        semester: 5,
+        section: "A",
+        dayOfWeek: day,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        subjectName: item.subject,
+        subjectCode: item.subjectCode,
+        facultyName: item.faculty || "-",
+        isBreak,
+      });
     }
-    // Add a different schedule for CSE 5 B
-    for (const day of DAYS) {
-      for (const t of TIMETABLE_TEMPLATE) {
-        tts.push({
-          department: "Computer Science & Engineering",
-          semester: 5,
-          section: "B",
-          dayOfWeek: day,
-          startTime: t.start,
-          endTime: t.end,
-          subjectName: rotate(t.subject, 1),
-          subjectCode: rotate(t.code, 1),
-          facultyName: rotate(t.faculty, 1),
-          isBreak: t.isBreak ?? false,
-        });
-      }
-    }
+
     await db.insert(timetable).values(tts);
   } catch (err) {
     console.warn("[ensureSeeded Notice] PostgreSQL unavailable, continuing in fallback mode.", err);

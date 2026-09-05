@@ -1,3 +1,6 @@
+import studentsMaster from "@/data/students_master.json";
+import timetableSectionB from "@/data/timetable_section_b.json";
+
 export interface MockUser {
   id: number;
   role: "student" | "mentor" | "hod" | "security" | "admin";
@@ -12,6 +15,7 @@ export interface MockUser {
   managedSemester?: number | null;
   managedSection?: string | null;
   clerkId?: string | null;
+  phone?: string;
 }
 
 export interface MockRoll {
@@ -76,17 +80,20 @@ export interface MockExitLog {
   passId: string;
   studentUsn: string;
   studentName: string;
-  scannedBy: string;
+  guardName?: string | null;
+  scannedBy?: string | null;
   exitTimestamp: Date;
+  status?: string | null;
   notes?: string | null;
 }
 
 export interface MockSmsLog {
   id: number;
   passId: string;
-  studentName: string;
-  studentUsn: string;
-  parentPhone: string;
+  studentName?: string;
+  studentUsn?: string;
+  parentPhone?: string;
+  phone?: string;
   body: string;
   sentAt: Date;
 }
@@ -104,38 +111,53 @@ const globalStore = globalThis as typeof globalThis & {
 };
 
 if (!globalStore.__gpMockStore) {
-  const rollList: MockRoll[] = [
-    { id: 1, usn: "CM25001", studentName: "Aaditya Sharma", department: "Computer Science & Engineering", semester: 5, section: "A", parentPhone: "+919876525001" },
-    { id: 2, usn: "CM25002", studentName: "Aakash Verma", department: "Computer Science & Engineering", semester: 5, section: "A", parentPhone: "+919876525002" },
-    { id: 3, usn: "CM25003", studentName: "Abhishek Kumar", department: "Computer Science & Engineering", semester: 5, section: "A", parentPhone: "+919876525003" },
-    { id: 4, usn: "SBJ23CSE001", studentName: "Aarav Sharma", department: "Computer Science & Engineering", semester: 5, section: "A", parentPhone: "+919876500001" },
-    { id: 5, usn: "SBJ23CSE002", studentName: "Aditi Verma", department: "Computer Science & Engineering", semester: 5, section: "B", parentPhone: "+919876500002" },
-    { id: 6, usn: "SBJ23AIM001", studentName: "Priya Patel", department: "Artificial Intelligence & ML", semester: 3, section: "B", parentPhone: "+919876500003" },
-  ];
+  // 1. Build roll list from uploaded students_master.json
+  const rollList: MockRoll[] = (studentsMaster as Array<{ studentId: string; name: string; department?: string; semester?: number; section?: string }>).map((s, idx) => ({
+    id: idx + 1,
+    usn: s.studentId.toUpperCase(),
+    studentName: s.name,
+    department: s.department || "CSE (AI&ML)",
+    semester: s.semester || 3,
+    section: s.section || "B",
+    parentPhone: `+9198765${String(idx + 1).padStart(5, "0")}`,
+  }));
 
+  // Append legacy test roll numbers
+  rollList.push(
+    { id: rollList.length + 1, usn: "SBJ23CSE001", studentName: "Aarav Sharma", department: "Computer Science & Engineering", semester: 5, section: "A", parentPhone: "+919876500001" },
+    { id: rollList.length + 1, usn: "SBJ23CSE002", studentName: "Aditi Verma", department: "Computer Science & Engineering", semester: 5, section: "B", parentPhone: "+919876500002" },
+    { id: rollList.length + 1, usn: "SBJ23AIM001", studentName: "Priya Patel", department: "Artificial Intelligence & ML", semester: 3, section: "B", parentPhone: "+919876500003" },
+  );
+
+  // 2. Pre-seeded Users
   const users: MockUser[] = [
+    // Staff & Faculty Accounts
     {
       id: 1,
-      role: "student",
-      name: "Aaditya Sharma",
-      identifier: "CM25001",
-      department: "Computer Science & Engineering",
-      semester: 5,
-      section: "A",
-      parentPhone: "+919876525001",
-    },
+      role: "admin",
+      name: "System Administrator",
+      identifier: "admin",
+      phone: "+919876543200",
+    } as any,
     {
       id: 2,
-      role: "student",
-      name: "Aarav Sharma",
-      identifier: "SBJ23CSE001",
-      department: "Computer Science & Engineering",
-      semester: 5,
-      section: "A",
-      parentPhone: "+919876500001",
-    },
+      role: "hod",
+      name: "Dr. Sarah Connor (HOD CSE)",
+      identifier: "hod_cse",
+      managedDepartment: "CSE (AI&ML)",
+      phone: "+919876543201",
+    } as any,
     {
       id: 3,
+      role: "mentor",
+      name: "Prof. S. Patil (Mentor Sec B)",
+      identifier: "mentor_cse_3_b",
+      managedDepartment: "CSE (AI&ML)",
+      managedSemester: 3,
+      managedSection: "B",
+    },
+    {
+      id: 4,
       role: "mentor",
       name: "Prof. Fifth A Mentor",
       identifier: "mentor_cse_5_a",
@@ -144,56 +166,87 @@ if (!globalStore.__gpMockStore) {
       managedSection: "A",
     },
     {
-      id: 4,
-      role: "hod",
-      name: "Dr. CSE HOD",
-      identifier: "hod_cse",
-      managedDepartment: "Computer Science & Engineering",
-    },
-    {
       id: 5,
       role: "security",
-      name: "Security Guard 1",
+      name: "Officer John Davis (Main Gate)",
       identifier: "guard1",
     },
     {
       id: 6,
-      role: "admin",
-      name: "System Administrator",
-      identifier: "admin",
+      role: "security",
+      name: "Officer Rajesh Kumar (North Gate)",
+      identifier: "guard2",
+    },
+    // Seed sample students
+    {
+      id: 7,
+      role: "student",
+      name: "Aaditya Sharma",
+      identifier: "CM25001",
+      department: "CSE (AI&ML)",
+      semester: 3,
+      section: "B",
+      parentPhone: "+919876525001",
+    },
+    {
+      id: 8,
+      role: "student",
+      name: "Aakash Verma",
+      identifier: "CM25002",
+      department: "CSE (AI&ML)",
+      semester: 3,
+      section: "B",
+      parentPhone: "+919876525002",
+    },
+    {
+      id: 9,
+      role: "student",
+      name: "Aarav Sharma",
+      identifier: "SBJ23CSE001",
+      department: "Computer Science & Engineering",
+      semester: 5,
+      section: "A",
+      parentPhone: "+919876500001",
     },
   ];
 
-  const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  const SLOTS = [
-    { start: "09:00", end: "10:00", subject: "Data Structures", code: "CS301", faculty: "Dr. S. Joshi", isBreak: false },
-    { start: "10:00", end: "11:00", subject: "Operating Systems", code: "CS302", faculty: "Prof. R. Iyer", isBreak: false },
-    { start: "11:00", end: "11:15", subject: "Tea Break", code: "BRK", faculty: "-", isBreak: true },
-    { start: "11:15", end: "12:15", subject: "Database Management", code: "CS303", faculty: "Dr. M. Khan", isBreak: false },
-    { start: "12:15", end: "13:15", subject: "Computer Networks", code: "CS304", faculty: "Prof. N. Reddy", isBreak: false },
-    { start: "13:15", end: "14:00", subject: "Lunch Break", code: "BRK", faculty: "-", isBreak: true },
-    { start: "14:00", end: "15:00", subject: "Software Engineering", code: "CS305", faculty: "Dr. A. Verma", isBreak: false },
-    { start: "15:00", end: "16:00", subject: "Web Technologies Lab", code: "CS306L", faculty: "Prof. P. Sharma", isBreak: false },
-  ];
-
+  // 3. Populate Timetable from timetable_section_b.json
   const timetable: MockTimetable[] = [];
   let ttId = 1;
-  for (const day of DAYS) {
-    for (const s of SLOTS) {
-      timetable.push({
-        id: ttId++,
-        department: "Computer Science & Engineering",
-        semester: 5,
-        section: "A",
-        dayOfWeek: day,
-        startTime: s.start,
-        endTime: s.end,
-        subjectName: s.subject,
-        subjectCode: s.code,
-        facultyName: s.faculty,
-        isBreak: s.isBreak,
-      });
-    }
+
+  for (const item of timetableSectionB as Array<{ day: string; startTime: string; endTime: string; subject: string; subjectCode: string; faculty?: string; type: string }>) {
+    const day = item.day.toLowerCase();
+    const isBreak = item.type === "BREAK" || item.subjectCode === "LUNCH";
+    
+    // For CSE (AI&ML) Sem 3 Sec B
+    timetable.push({
+      id: ttId++,
+      department: "CSE (AI&ML)",
+      semester: 3,
+      section: "B",
+      dayOfWeek: day,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      subjectName: item.subject,
+      subjectCode: item.subjectCode,
+      facultyName: item.faculty || "-",
+      isBreak,
+    });
+
+    // Also support Computer Science & Engineering alias
+    timetable.push({
+      id: ttId++,
+      department: "Computer Science & Engineering",
+      semester: 5,
+      section: "A",
+      dayOfWeek: day,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      subjectName: item.subject,
+      subjectCode: item.subjectCode,
+      facultyName: item.faculty || "-",
+      isBreak,
+    });
   }
 
   const gatePasses: MockGatePass[] = [

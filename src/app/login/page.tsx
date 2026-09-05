@@ -624,12 +624,12 @@ function LoginInner() {
 }
 
 const SAMPLE_STUDENTS = [
-  { usn: "CM25001", name: "Aaditya Sharma", dept: "CSE", sem: 5, sec: "A", phone: "+919876525001" },
-  { usn: "CM25002", name: "Aakash Verma", dept: "CSE", sem: 5, sec: "A", phone: "+919876525002" },
-  { usn: "CM25003", name: "Abhishek Kumar", dept: "CSE", sem: 5, sec: "A", phone: "+919876525003" },
-  { usn: "SBJ23CSE001", name: "Aarav Sharma", dept: "CSE", sem: 5, sec: "A", phone: "+919876500001" },
-  { usn: "SBJ23CSE002", name: "Aditi Verma", dept: "CSE", sem: 5, sec: "B", phone: "+919876500002" },
-  { usn: "SBJ23AIM001", name: "Priya Patel", dept: "AI&ML", sem: 3, sec: "B", phone: "+919876500003" },
+  { usn: "CM25001", name: "Aaditya Sharma", dept: "CSE (AI&ML)", sem: 3, sec: "B", phone: "+919876525001" },
+  { usn: "CM25002", name: "Aakash Verma", dept: "CSE (AI&ML)", sem: 3, sec: "B", phone: "+919876525002" },
+  { usn: "CM25003", name: "Abhishek Kumar", dept: "CSE (AI&ML)", sem: 3, sec: "B", phone: "+919876525003" },
+  { usn: "CM25004", name: "Aditi Deshmukh", dept: "CSE (AI&ML)", sem: 3, sec: "B", phone: "+919876525004" },
+  { usn: "CM25012", name: "Aryan Joshi", dept: "CSE (AI&ML)", sem: 3, sec: "B", phone: "+919876525012" },
+  { usn: "CM25043", name: "Priya Sharma", dept: "CSE (AI&ML)", sem: 3, sec: "B", phone: "+919876525043" },
 ];
 
 function Field({
