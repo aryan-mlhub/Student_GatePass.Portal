@@ -107,42 +107,56 @@ function Inner() {
         </p>
 
         {/* Dynamic routing helper banner */}
-        {p.status === "pending_mentor" && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              Stage 1 of 2: Awaiting Mentor Approval
-            </div>
-            <p className="mt-1 text-xs text-amber-800 leading-relaxed">
-              This request is currently in the <strong>Mentor</strong> queue for {p.department} (Sem {p.semester}-{p.section}).
-              To review or approve, sign in as mentor: <code className="bg-white/80 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold text-amber-900">mentor_cse_5_a</code> (Password: <code className="font-mono">mentor123</code>).
-            </p>
-          </div>
-        )}
+        {(() => {
+          const isAiml = p.department.toLowerCase().includes("ai") || p.department.toLowerCase().includes("aiml");
+          const mentorId = (isAiml && p.semester === 3 && p.section.toUpperCase() === "B")
+            ? "mentor_cse_3_b"
+            : `mentor_cse_${p.semester}_${p.section.toLowerCase()}`;
+          const hodId = isAiml ? "hod_aiml" : "hod_cse";
+          const mentorName = isAiml ? "Prof. S. Patil (Section B Mentor)" : "Section Mentor";
+          const hodName = isAiml ? "Dr. Sarah Connor (AIML HOD)" : "HOD";
 
-        {p.status === "pending_hod" && (
-          <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 text-indigo-950">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-800">
-              <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
-              Final Stage: Awaiting HOD Final Approval
-            </div>
-            <p className="mt-1 text-xs text-indigo-800 leading-relaxed">
-              This request is currently in the <strong>HOD</strong> queue for {p.department}.
-              To review or give final signoff, sign in as HOD: <code className="bg-white/80 border border-indigo-200 px-1.5 py-0.5 rounded font-mono font-bold text-indigo-900">hod_cse</code> (Password: <code className="font-mono">hod123</code>) or <code className="font-mono">admin</code>.
-            </p>
-          </div>
-        )}
+          return (
+            <>
+              {p.status === "pending_mentor" && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                    Stage 1 of 2: Awaiting Mentor Approval
+                  </div>
+                  <p className="mt-1 text-xs text-amber-800 leading-relaxed">
+                    This request is in the queue for <strong>{mentorName}</strong> ({p.department}, Sem {p.semester}-{p.section}).
+                    Sign in as mentor to review: <code className="bg-white/80 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold text-amber-900">{mentorId}</code> (Password: <code className="font-mono">mentor123</code>).
+                  </p>
+                </div>
+              )}
 
-        {p.status === "approved" && (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-950">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800">
-              ✓ Approved & Active
-            </div>
-            <p className="mt-1 text-xs text-emerald-800 leading-relaxed">
-              Your gate pass has been approved by HOD. Show the signed QR code to the Security Guard at the gate.
-            </p>
-          </div>
-        )}
+              {p.status === "pending_hod" && (
+                <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 text-indigo-950">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-800">
+                    <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+                    Stage 2 of 2: Awaiting HOD Final Approval
+                  </div>
+                  <p className="mt-1 text-xs text-indigo-800 leading-relaxed">
+                    Mentor approved! This request is now in the queue for <strong>{hodName}</strong>.
+                    Sign in as HOD to grant final approval and generate the QR code: <code className="bg-white/80 border border-indigo-200 px-1.5 py-0.5 rounded font-mono font-bold text-indigo-900">{hodId}</code> (Password: <code className="font-mono">hod123</code>).
+                  </p>
+                </div>
+              )}
+
+              {p.status === "approved" && (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-950">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800">
+                    ✓ Final Approval Granted by HOD · QR Active
+                  </div>
+                  <p className="mt-1 text-xs text-emerald-800 leading-relaxed">
+                    Approved by {p.hodName || hodName}. Present the cryptographically signed QR code below to Security at the gate.
+                  </p>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">

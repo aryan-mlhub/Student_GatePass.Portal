@@ -47,7 +47,9 @@ export async function POST(req: NextRequest) {
     flow = "emergency";
   }
 
-  const status = flow === "academic" ? "pending_mentor" : "pending_hod";
+  // All gatepass requests go first to the Section Mentor (pending_mentor)
+  // After mentor approval, they proceed to HOD (pending_hod), then generate QR upon HOD approval.
+  const status = "pending_mentor";
   const passId = `GP-${new Date().getFullYear()}-${nanoid(8).toUpperCase()}`;
 
   // 1. Try DB if configured
