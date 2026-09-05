@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { gatePasses } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+import { mockStore } from "@/lib/mock-db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,18 @@ export async function GET() {
   if (!session || session.role !== "admin") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const rows = await db
-    .select()
-    .from(gatePasses)
-    .orderBy(desc(gatePasses.requestTimestamp));
-  return NextResponse.json({ passes: rows });
+
+  try {
+    const rows = await db
+      .select()
+      .from(gatePasses)
+      .orderBy(desc(gatePasses.requestTimestamp));
+    if (rows && rows.length > 0) {
+      return NextResponse.json({ passes: rows });
+    }
+  } catch (err) {
+    console.warn("[Admin Passes DB Notice] Using memory store fallback.", err);
+  }
+
+  return NextResponse.json({ passes: mockStore.gatePasses });
 }

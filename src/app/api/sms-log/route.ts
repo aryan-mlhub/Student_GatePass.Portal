@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { parentSmsLog } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+import { mockStore } from "@/lib/mock-db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,10 +17,19 @@ export async function GET() {
   ) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const rows = await db
-    .select()
-    .from(parentSmsLog)
-    .orderBy(desc(parentSmsLog.sentAt))
-    .limit(50);
-  return NextResponse.json({ logs: rows });
+
+  try {
+    const rows = await db
+      .select()
+      .from(parentSmsLog)
+      .orderBy(desc(parentSmsLog.sentAt))
+      .limit(50);
+    if (rows && rows.length > 0) {
+      return NextResponse.json({ logs: rows });
+    }
+  } catch (err) {
+    console.warn("[ParentSmsLog DB Notice] Using memory store fallback.", err);
+  }
+
+  return NextResponse.json({ logs: mockStore.parentSmsLogs });
 }

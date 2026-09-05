@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { ne } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+import { mockStore } from "@/lib/mock-db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,19 @@ export async function GET() {
   if (!session || session.role !== "admin") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const rows = await db
-    .select()
-    .from(users)
-    .where(ne(users.role, "student"));
-  return NextResponse.json({ users: rows });
+
+  try {
+    const rows = await db
+      .select()
+      .from(users)
+      .where(ne(users.role, "student"));
+    if (rows && rows.length > 0) {
+      return NextResponse.json({ users: rows });
+    }
+  } catch (err) {
+    console.warn("[Admin Users DB Notice] Using memory store fallback.", err);
+  }
+
+  const staff = mockStore.users.filter((u) => u.role !== "student");
+  return NextResponse.json({ users: staff });
 }

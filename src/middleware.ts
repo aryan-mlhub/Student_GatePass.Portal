@@ -1,4 +1,12 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse, type NextRequest } from "next/server";
+
+const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const isClerkEnabled =
+  typeof publishableKey === "string" &&
+  publishableKey.startsWith("pk_") &&
+  !publishableKey.includes("your_clerk") &&
+  !publishableKey.includes("mock");
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -9,18 +17,20 @@ const isPublicRoute = createRouteMatcher([
   "/assets/(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
-  // If Clerk is configured with real keys, protect private routes
-  if (
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("mock") &&
-    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("your_clerk")
-  ) {
-    if (!isPublicRoute(req)) {
-      await auth.protect();
-    }
+const clerkHandler = isClerkEnabled
+  ? clerkMiddleware(async (auth, req) => {
+      if (!isPublicRoute(req)) {
+        await auth.protect();
+      }
+    })
+  : null;
+
+export default function middleware(req: NextRequest, event: any) {
+  if (clerkHandler) {
+    return clerkHandler(req, event);
   }
-});
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
@@ -30,3 +40,4 @@ export const config = {
     "/(api|trpc)(.*)",
   ],
 };
+

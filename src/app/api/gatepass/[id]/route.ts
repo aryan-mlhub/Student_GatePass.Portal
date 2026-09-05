@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import QRCode from "qrcode";
 import { createHmac } from "crypto";
+import { mockStore, type MockGatePass } from "@/lib/mock-db";
 
 export const dynamic = "force-dynamic";
 
@@ -30,18 +31,33 @@ export async function GET(
   const { id } = await ctx.params;
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const rows = await db
-    .select()
-    .from(gatePasses)
-    .where(eq(gatePasses.passId, id))
-    .limit(1);
-  const pass = rows[0];
+
+  let pass: any = null;
+
+  // 1. Try DB
+  try {
+    const rows = await db
+      .select()
+      .from(gatePasses)
+      .where(eq(gatePasses.passId, id))
+      .limit(1);
+    pass = rows[0];
+  } catch (err) {
+    console.warn("[GatePass GET ID DB Notice] Using memory store fallback.", err);
+  }
+
+  // 2. Fallback to mockStore
+  if (!pass) {
+    pass = mockStore.gatePasses.find((p) => p.passId === id);
+  }
+
   if (!pass) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // Students can only see their own passes
-  if (session.role === "student" && pass.studentUsn !== session.identifier) {
+  if (session.role === "student" && pass.studentUsn.toLowerCase() !== session.identifier.toLowerCase()) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+
   let qrSvg: string | null = null;
   if (pass.qrPayload) {
     qrSvg = await QRCode.toString(pass.qrPayload, {
@@ -68,12 +84,27 @@ export async function PATCH(
   const action = body.action as string;
   const comment = (body.comment as string | undefined) || null;
 
-  const rows = await db
-    .select()
-    .from(gatePasses)
-    .where(eq(gatePasses.passId, id))
-    .limit(1);
-  const pass = rows[0];
+  let pass: any = null;
+  let useMock = false;
+
+  // 1. Try DB
+  try {
+    const rows = await db
+      .select()
+      .from(gatePasses)
+      .where(eq(gatePasses.passId, id))
+      .limit(1);
+    pass = rows[0];
+  } catch (err) {
+    console.warn("[GatePass PATCH ID DB Notice] Using memory store fallback.", err);
+    useMock = true;
+  }
+
+  if (!pass) {
+    pass = mockStore.gatePasses.find((p) => p.passId === id);
+    useMock = true;
+  }
+
   if (!pass) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   if (action === "approve_mentor") {
@@ -86,17 +117,31 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    const updated = await db
-      .update(gatePasses)
-      .set({
-        status: "pending_hod",
-        mentorName: session.name,
-        mentorActionAt: new Date(),
-        mentorComment: comment,
-      })
-      .where(eq(gatePasses.passId, id))
-      .returning();
-    return NextResponse.json({ pass: updated[0] });
+
+    if (!useMock) {
+      try {
+        const updated = await db
+          .update(gatePasses)
+          .set({
+            status: "pending_hod",
+            mentorName: session.name,
+            mentorActionAt: new Date(),
+            mentorComment: comment,
+          })
+          .where(eq(gatePasses.passId, id))
+          .returning();
+        return NextResponse.json({ pass: updated[0] });
+      } catch (err) {
+        console.warn("[GatePass Mentor Approval DB Notice] Falling back to mockStore.", err);
+      }
+    }
+
+    // MockStore update
+    pass.status = "pending_hod";
+    pass.mentorName = session.name;
+    pass.mentorActionAt = new Date();
+    pass.mentorComment = comment;
+    return NextResponse.json({ pass });
   }
 
   if (action === "approve_hod") {
@@ -112,24 +157,8 @@ export async function PATCH(
     const qrToken = nanoid(24);
     const qrPayload = buildQrPayload(pass.passId);
     const expires = new Date(Date.now() + 6 * 60 * 60 * 1000); // 6 hours
-    const updated = await db
-      .update(gatePasses)
-      .set({
-        status: "approved",
-        hodName: session.name,
-        hodActionAt: new Date(),
-        hodComment: comment,
-        qrToken,
-        qrPayload,
-        qrIssuedAt: new Date(),
-        qrExpiresAt: expires,
-      })
-      .where(eq(gatePasses.passId, id))
-      .returning();
 
-    // Trigger simulated parent SMS
-    const approved = updated[0];
-    const d = approved.hodActionAt ?? new Date();
+    const d = new Date();
     const dateStr = d.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
@@ -140,27 +169,71 @@ export async function PATCH(
       minute: "2-digit",
       hour12: true,
     });
-    const smsBody = `Dear Parent, the gate pass for ${approved.studentName} - ${approved.studentUsn} has been APPROVED on ${dateStr} at ${timeStr}. Reason: ${approved.reason}. - SBJITMR Gate Pass System`;
-    // Find parent phone via users.roll list lookup would be heavier; we have parentPhone in user record.
-    const studentRows = await db
-      .select()
-      .from(users)
-      .where(eq(users.identifier, approved.studentUsn))
-      .limit(1);
-    const parentPhone = studentRows[0]?.parentPhone || "unknown";
-    await db.insert(parentSmsLog).values({
-      passId: approved.passId,
-      studentName: approved.studentName,
-      studentUsn: approved.studentUsn,
-      parentPhone,
-      body: smsBody,
-    });
-    await db
-      .update(gatePasses)
-      .set({ parentSmsSent: true, parentSmsBody: smsBody })
-      .where(eq(gatePasses.passId, approved.passId));
+    const smsBody = `Dear Parent, the gate pass for ${pass.studentName} - ${pass.studentUsn} has been APPROVED on ${dateStr} at ${timeStr}. Reason: ${pass.reason}. - SBJITMR Gate Pass System`;
 
-    return NextResponse.json({ pass: { ...approved, parentSmsBody: smsBody } });
+    if (!useMock) {
+      try {
+        const updated = await db
+          .update(gatePasses)
+          .set({
+            status: "approved",
+            hodName: session.name,
+            hodActionAt: new Date(),
+            hodComment: comment,
+            qrToken,
+            qrPayload,
+            qrIssuedAt: new Date(),
+            qrExpiresAt: expires,
+            parentSmsSent: true,
+            parentSmsBody: smsBody,
+          })
+          .where(eq(gatePasses.passId, id))
+          .returning();
+
+        const approved = updated[0];
+        const studentRows = await db
+          .select()
+          .from(users)
+          .where(eq(users.identifier, approved.studentUsn))
+          .limit(1);
+        const parentPhone = studentRows[0]?.parentPhone || "+919876500000";
+        await db.insert(parentSmsLog).values({
+          passId: approved.passId,
+          studentName: approved.studentName,
+          studentUsn: approved.studentUsn,
+          parentPhone,
+          body: smsBody,
+        });
+
+        return NextResponse.json({ pass: { ...approved, parentSmsBody: smsBody } });
+      } catch (err) {
+        console.warn("[GatePass HOD Approval DB Notice] Falling back to mockStore.", err);
+      }
+    }
+
+    // MockStore update
+    pass.status = "approved";
+    pass.hodName = session.name;
+    pass.hodActionAt = new Date();
+    pass.hodComment = comment;
+    pass.qrToken = qrToken;
+    pass.qrPayload = qrPayload;
+    pass.qrIssuedAt = new Date();
+    pass.qrExpiresAt = expires;
+    pass.parentSmsSent = true;
+    pass.parentSmsBody = smsBody;
+
+    mockStore.parentSmsLogs.unshift({
+      id: mockStore.parentSmsLogs.length + 1,
+      passId: pass.passId,
+      studentName: pass.studentName,
+      studentUsn: pass.studentUsn,
+      parentPhone: "+919876525001",
+      body: smsBody,
+      sentAt: new Date(),
+    });
+
+    return NextResponse.json({ pass });
   }
 
   if (action === "reject") {
@@ -188,12 +261,32 @@ export async function PATCH(
       updates.hodActionAt = new Date();
       updates.hodComment = comment;
     }
-    const updated = await db
-      .update(gatePasses)
-      .set(updates)
-      .where(eq(gatePasses.passId, id))
-      .returning();
-    return NextResponse.json({ pass: updated[0] });
+
+    if (!useMock) {
+      try {
+        const updated = await db
+          .update(gatePasses)
+          .set(updates)
+          .where(eq(gatePasses.passId, id))
+          .returning();
+        return NextResponse.json({ pass: updated[0] });
+      } catch (err) {
+        console.warn("[GatePass Reject DB Notice] Falling back to mockStore.", err);
+      }
+    }
+
+    // MockStore update
+    pass.status = "rejected";
+    if (pass.status === "pending_mentor") {
+      pass.mentorName = session.name;
+      pass.mentorActionAt = new Date();
+      pass.mentorComment = comment;
+    } else {
+      pass.hodName = session.name;
+      pass.hodActionAt = new Date();
+      pass.hodComment = comment;
+    }
+    return NextResponse.json({ pass });
   }
 
   return NextResponse.json({ error: "unknown action" }, { status: 400 });

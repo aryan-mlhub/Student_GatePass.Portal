@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { timetable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
+import { mockStore } from "@/lib/mock-db";
 
 export const dynamic = "force-dynamic";
 
@@ -33,15 +34,34 @@ export async function PATCH(
     if (k in body) updates[k] = body[k];
   }
   if (updates.semester) updates.semester = parseInt(String(updates.semester), 10);
-  const updated = await db
-    .update(timetable)
-    .set(updates)
-    .where(eq(timetable.id, parseInt(id, 10)))
-    .returning();
-  if (!updated[0]) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  const numId = parseInt(id, 10);
+
+  // 1. Try DB
+  try {
+    const updated = await db
+      .update(timetable)
+      .set(updates)
+      .where(eq(timetable.id, numId))
+      .returning();
+    if (updated[0]) {
+      return NextResponse.json({ entry: updated[0] });
+    }
+  } catch (err) {
+    console.warn("[Timetable PATCH ID DB Notice] Using memory store fallback.", err);
   }
-  return NextResponse.json({ entry: updated[0] });
+
+  // 2. Fallback to mockStore
+  const index = mockStore.timetable.findIndex((t) => t.id === numId);
+  if (index !== -1) {
+    mockStore.timetable[index] = {
+      ...mockStore.timetable[index],
+      ...updates,
+    } as any;
+    return NextResponse.json({ entry: mockStore.timetable[index] });
+  }
+
+  return NextResponse.json({ error: "not found" }, { status: 404 });
 }
 
 export async function DELETE(
@@ -53,12 +73,28 @@ export async function DELETE(
   if (!session || (session.role !== "admin" && session.role !== "hod")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  const deleted = await db
-    .delete(timetable)
-    .where(eq(timetable.id, parseInt(id, 10)))
-    .returning();
-  if (!deleted[0]) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  const numId = parseInt(id, 10);
+
+  // 1. Try DB
+  try {
+    const deleted = await db
+      .delete(timetable)
+      .where(eq(timetable.id, numId))
+      .returning();
+    if (deleted[0]) {
+      return NextResponse.json({ ok: true });
+    }
+  } catch (err) {
+    console.warn("[Timetable DELETE ID DB Notice] Using memory store fallback.", err);
   }
-  return NextResponse.json({ ok: true });
+
+  // 2. Fallback to mockStore
+  const index = mockStore.timetable.findIndex((t) => t.id === numId);
+  if (index !== -1) {
+    mockStore.timetable.splice(index, 1);
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "not found" }, { status: 404 });
 }
