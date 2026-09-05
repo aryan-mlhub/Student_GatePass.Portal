@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { UserButton, useClerk } from "@clerk/nextjs";
 import { RotatingLogo } from "./RotatingLogo";
 
 export interface SessionUser {
@@ -46,7 +45,6 @@ const NAV_BY_ROLE: Record<SessionUser["role"], { href: string; label: string }[]
 export function Topbar({ user }: { user: SessionUser | null }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { signOut } = useClerk();
   const [now, setNow] = useState<string>("");
 
   useEffect(() => {
@@ -73,11 +71,6 @@ export function Topbar({ user }: { user: SessionUser | null }) {
     pathname === href || (href !== "/" && pathname?.startsWith(href));
 
   async function handleSignOut() {
-    try {
-      await signOut();
-    } catch {
-      // Ignored if Clerk not in use
-    }
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
@@ -119,7 +112,9 @@ export function Topbar({ user }: { user: SessionUser | null }) {
                   {user.name}
                 </div>
               </div>
-              <UserButton />
+              <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs border border-emerald-200">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
               <button
                 className="btn btn-secondary text-xs"
                 onClick={handleSignOut}
