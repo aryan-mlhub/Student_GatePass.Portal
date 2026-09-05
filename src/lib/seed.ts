@@ -109,7 +109,151 @@ const DAYS = [
   "saturday",
 ] as const;
 
+let schemaEnsured = false;
+
+export async function ensureSchema() {
+  if (schemaEnsured) return;
+
+  // 1. Create Enums
+  await db.execute(sql`
+    DO $$ BEGIN
+      CREATE TYPE user_role AS ENUM ('student', 'mentor', 'hod', 'security', 'admin');
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;
+  `);
+
+  await db.execute(sql`
+    DO $$ BEGIN
+      CREATE TYPE pass_status AS ENUM ('pending_mentor', 'pending_hod', 'approved', 'rejected');
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;
+  `);
+
+  await db.execute(sql`
+    DO $$ BEGIN
+      CREATE TYPE pass_flow AS ENUM ('academic', 'free_period', 'emergency');
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;
+  `);
+
+  // 2. Create Tables and Indexes
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS roll_list (
+      id SERIAL PRIMARY KEY,
+      usn VARCHAR(32) NOT NULL,
+      student_name TEXT NOT NULL,
+      department TEXT NOT NULL,
+      semester INTEGER NOT NULL,
+      section TEXT NOT NULL,
+      parent_phone VARCHAR(20) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS roll_list_usn_unique ON roll_list (usn);
+    CREATE INDEX IF NOT EXISTS roll_list_dept_sem_sec ON roll_list (department, semester, section);
+
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      role user_role NOT NULL,
+      name TEXT NOT NULL,
+      identifier VARCHAR(64) NOT NULL,
+      password_hash TEXT NOT NULL,
+      department TEXT,
+      semester INTEGER,
+      section TEXT,
+      parent_phone VARCHAR(20),
+      managed_department TEXT,
+      managed_semester INTEGER,
+      managed_section TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS users_identifier_role_unique ON users (identifier, role);
+
+    CREATE TABLE IF NOT EXISTS timetable (
+      id SERIAL PRIMARY KEY,
+      department TEXT NOT NULL,
+      semester INTEGER NOT NULL,
+      section TEXT NOT NULL,
+      day_of_week TEXT NOT NULL,
+      start_time VARCHAR(8) NOT NULL,
+      end_time VARCHAR(8) NOT NULL,
+      subject_name TEXT NOT NULL,
+      subject_code VARCHAR(32) NOT NULL,
+      faculty_name TEXT NOT NULL,
+      is_break BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS timetable_lookup ON timetable (department, semester, section, day_of_week);
+
+    CREATE TABLE IF NOT EXISTS gate_passes (
+      id SERIAL PRIMARY KEY,
+      pass_id VARCHAR(32) NOT NULL,
+      student_usn VARCHAR(32) NOT NULL,
+      student_name TEXT NOT NULL,
+      department TEXT NOT NULL,
+      semester INTEGER NOT NULL,
+      section TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      request_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      status pass_status NOT NULL DEFAULT 'pending_mentor',
+      flow pass_flow NOT NULL DEFAULT 'academic',
+      current_subject TEXT,
+      current_subject_code VARCHAR(32),
+      current_faculty TEXT,
+      slot_start VARCHAR(8),
+      slot_end VARCHAR(8),
+      mentor_name TEXT,
+      mentor_action_at TIMESTAMPTZ,
+      mentor_comment TEXT,
+      hod_name TEXT,
+      hod_action_at TIMESTAMPTZ,
+      hod_comment TEXT,
+      qr_token VARCHAR(128),
+      qr_payload TEXT,
+      qr_issued_at TIMESTAMPTZ,
+      qr_expires_at TIMESTAMPTZ,
+      exit_timestamp TIMESTAMPTZ,
+      exit_logged_by TEXT,
+      parent_sms_sent BOOLEAN NOT NULL DEFAULT FALSE,
+      parent_sms_body TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS gate_passes_pass_id_unique ON gate_passes (pass_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS gate_passes_qr_token_unique ON gate_passes (qr_token);
+    CREATE INDEX IF NOT EXISTS gate_passes_student ON gate_passes (student_usn);
+    CREATE INDEX IF NOT EXISTS gate_passes_status ON gate_passes (status);
+
+    CREATE TABLE IF NOT EXISTS parent_sms_log (
+      id SERIAL PRIMARY KEY,
+      pass_id VARCHAR(32) NOT NULL,
+      student_name TEXT NOT NULL,
+      student_usn VARCHAR(32) NOT NULL,
+      parent_phone VARCHAR(20) NOT NULL,
+      body TEXT NOT NULL,
+      sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS exit_logs (
+      id SERIAL PRIMARY KEY,
+      pass_id VARCHAR(32) NOT NULL,
+      student_usn VARCHAR(32) NOT NULL,
+      student_name TEXT NOT NULL,
+      scanned_by TEXT NOT NULL,
+      exit_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      notes TEXT
+    );
+    CREATE INDEX IF NOT EXISTS exit_logs_pass ON exit_logs (pass_id);
+  `);
+
+  schemaEnsured = true;
+}
+
 export async function ensureSeeded() {
+  // Ensure tables and types exist first
+  await ensureSchema();
+
   // Skip if roll list already populated
   const existing = await db
     .select({ count: sql<number>`count(*)::int` })

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { gatePasses, exitLogs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { createHmac } from "crypto";
 import { ensureSeeded } from "@/lib/seed";
@@ -108,6 +108,7 @@ export async function GET(_req: NextRequest) {
   const rows = await db
     .select()
     .from(exitLogs)
-    .orderBy(eq(exitLogs.passId, exitLogs.passId));
-  return NextResponse.json({ logs: rows.reverse() });
+    .orderBy(desc(exitLogs.exitTimestamp))
+    .limit(50);
+  return NextResponse.json({ logs: rows });
 }
