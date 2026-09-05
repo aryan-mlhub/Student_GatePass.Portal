@@ -68,6 +68,8 @@ export const users = pgTable(
     // For students this is the USN, for staff this is the employee id
     identifier: varchar("identifier", { length: 64 }).notNull(),
     passwordHash: text("password_hash").notNull(),
+    // Clerk Authentication User ID
+    clerkId: varchar("clerk_id", { length: 128 }),
     // For students (linked to roll list)
     department: text("department"),
     semester: integer("semester"),
@@ -86,6 +88,7 @@ export const users = pgTable(
       t.identifier,
       t.role,
     ),
+    clerkIdIdx: index("users_clerk_id_idx").on(t.clerkId),
   }),
 );
 

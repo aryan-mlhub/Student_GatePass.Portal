@@ -160,6 +160,7 @@ export async function ensureSchema() {
       name TEXT NOT NULL,
       identifier VARCHAR(64) NOT NULL,
       password_hash TEXT NOT NULL,
+      clerk_id VARCHAR(128),
       department TEXT,
       semester INTEGER,
       section TEXT,
@@ -169,7 +170,9 @@ export async function ensureSchema() {
       managed_section TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_id VARCHAR(128);
     CREATE UNIQUE INDEX IF NOT EXISTS users_identifier_role_unique ON users (identifier, role);
+    CREATE INDEX IF NOT EXISTS users_clerk_id_idx ON users (clerk_id);
 
     CREATE TABLE IF NOT EXISTS timetable (
       id SERIAL PRIMARY KEY,

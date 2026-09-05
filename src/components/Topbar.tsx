@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { UserButton, useClerk } from "@clerk/nextjs";
 import { RotatingLogo } from "./RotatingLogo";
 
 export interface SessionUser {
@@ -45,6 +46,7 @@ const NAV_BY_ROLE: Record<SessionUser["role"], { href: string; label: string }[]
 export function Topbar({ user }: { user: SessionUser | null }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { signOut } = useClerk();
   const [now, setNow] = useState<string>("");
 
   useEffect(() => {
@@ -69,6 +71,17 @@ export function Topbar({ user }: { user: SessionUser | null }) {
   const items = user ? NAV_BY_ROLE[user.role] : [];
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname?.startsWith(href));
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+    } catch {
+      // Ignored if Clerk not in use
+    }
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur">
@@ -106,20 +119,10 @@ export function Topbar({ user }: { user: SessionUser | null }) {
                   {user.name}
                 </div>
               </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-indigo-500 text-sm font-bold text-white">
-                {user.name
-                  .split(" ")
-                  .map((p) => p[0])
-                  .slice(0, 2)
-                  .join("")}
-              </div>
+              <UserButton />
               <button
-                className="btn btn-secondary"
-                onClick={async () => {
-                  await fetch("/api/auth/logout", { method: "POST" });
-                  router.push("/login");
-                  router.refresh();
-                }}
+                className="btn btn-secondary text-xs"
+                onClick={handleSignOut}
               >
                 Sign out
               </button>

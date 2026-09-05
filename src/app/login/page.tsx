@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { SignIn } from "@clerk/nextjs";
 import { RotatingLogo } from "@/components/RotatingLogo";
 
 type Role = "student" | "mentor" | "hod" | "security" | "admin";
@@ -22,7 +23,7 @@ function LoginInner() {
   const initialMode = sp.get("signup") ? "signup" : "login";
 
   const [role, setRole] = useState<Role>(initialRole);
-  const [mode, setMode] = useState<"login" | "signup">(initialMode);
+  const [mode, setMode] = useState<"login" | "signup" | "clerk">(initialMode);
 
   // login fields
   const [identifier, setIdentifier] = useState("");
@@ -49,6 +50,11 @@ function LoginInner() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isClerkConfigured =
+    typeof process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith("pk_") &&
+    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("your_clerk");
 
   // When switching to student signup, lookup roll list as USN is typed
   useEffect(() => {
@@ -161,87 +167,133 @@ function LoginInner() {
               : "Enter your SBJITMR USN to auto-fill your details from the official roll list."}
           </p>
 
-          {/* Role tabs */}
-          {mode === "login" && (
-            <div className="mt-6 flex flex-wrap gap-1.5 rounded-xl bg-slate-100 p-1 text-xs font-semibold">
-              {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  className={`flex-1 rounded-lg px-3 py-2 transition ${
-                    role === r
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                  onClick={() => setRole(r)}
-                >
-                  {ROLE_LABELS[r]}
-                </button>
-              ))}
+          {/* Auth mode selector: Campus Credentials vs Clerk SSO */}
+          {isClerkConfigured && (
+            <div className="mt-4 grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+              <button
+                type="button"
+                className={`py-2 rounded-lg transition-all ${
+                  mode !== "clerk"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+                onClick={() => setMode("login")}
+              >
+                🎓 Campus Credentials
+              </button>
+              <button
+                type="button"
+                className={`py-2 rounded-lg transition-all ${
+                  mode === "clerk"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+                onClick={() => setMode("clerk")}
+              >
+                ⚡ Clerk SSO / Social
+              </button>
             </div>
           )}
 
-          {mode === "login" ? (
-            <form onSubmit={submitLogin} className="mt-6 space-y-4">
-              <Field
-                label={
-                  role === "student"
-                    ? "USN"
-                    : role === "admin" || role === "security"
-                      ? "Username"
-                      : "Employee ID"
-                }
-                value={identifier}
-                onChange={setIdentifier}
-                placeholder={
-                  role === "student"
-                    ? "SBJ23CSE001"
-                    : role === "hod"
-                      ? "hod_cse"
-                      : role === "mentor"
-                        ? "mentor_cse_5_a"
-                        : role === "admin"
-                          ? "admin"
-                          : "guard1"
-                }
-                autoComplete="username"
+          {mode === "clerk" ? (
+            <div className="mt-6 flex justify-center">
+              <SignIn
+                appearance={{
+                  elements: {
+                    rootBox: "w-full",
+                    card: "rounded-2xl shadow-none border-0 p-0",
+                    formButtonPrimary:
+                      "bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold",
+                  },
+                }}
+                routing="path"
+                path="/login"
+                signUpUrl="/signup"
               />
-              <Field
-                label="Password"
-                value={password}
-                onChange={setPassword}
-                type="password"
-                placeholder="Enter your password"
-              />
-              {error && (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                  {error}
-                </div>
-              )}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="btn btn-primary w-full"
-              >
-                {submitting ? "Signing in…" : `Sign in as ${ROLE_LABELS[role]}`}
-              </button>
-              {role === "student" && (
-                <div className="text-center text-sm text-slate-600">
-                  First time?{" "}
-                  <button
-                    type="button"
-                    className="font-semibold text-indigo-700 hover:underline"
-                    onClick={() => {
-                      setMode("signup");
-                      setError(null);
-                    }}
-                  >
-                    Sign up with your USN
-                  </button>
-                </div>
-              )}
-            </form>
+            </div>
           ) : (
+            <>
+              {/* Role tabs */}
+              {mode === "login" && (
+                <div className="mt-6 flex flex-wrap gap-1.5 rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+                  {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={`flex-1 rounded-lg px-3 py-2 transition ${
+                        role === r
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                      onClick={() => setRole(r)}
+                    >
+                      {ROLE_LABELS[r]}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {mode === "login" ? (
+                <form onSubmit={submitLogin} className="mt-6 space-y-4">
+                  <Field
+                    label={
+                      role === "student"
+                        ? "USN"
+                        : role === "admin" || role === "security"
+                          ? "Username"
+                          : "Employee ID"
+                    }
+                    value={identifier}
+                    onChange={setIdentifier}
+                    placeholder={
+                      role === "student"
+                        ? "SBJ23CSE001"
+                        : role === "hod"
+                          ? "hod_cse"
+                          : role === "mentor"
+                            ? "mentor_cse_5_a"
+                            : role === "admin"
+                              ? "admin"
+                              : "guard1"
+                    }
+                    autoComplete="username"
+                  />
+                  <Field
+                    label="Password"
+                    value={password}
+                    onChange={setPassword}
+                    type="password"
+                    placeholder="Enter your password"
+                  />
+                  {error && (
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                      {error}
+                    </div>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="btn btn-primary w-full"
+                  >
+                    {submitting ? "Signing in…" : `Sign in as ${ROLE_LABELS[role]}`}
+                  </button>
+                  {role === "student" && (
+                    <div className="text-center text-sm text-slate-600">
+                      First time?{" "}
+                      <button
+                        type="button"
+                        className="font-semibold text-indigo-700 hover:underline"
+                        onClick={() => {
+                          setMode("signup");
+                          setError(null);
+                        }}
+                      >
+                        Sign up with your USN
+                      </button>
+                    </div>
+                  )}
+                </form>
+              ) : (
             <form onSubmit={submitSignup} className="mt-6 space-y-4">
               <Field
                 label="SBJITMR USN"
@@ -321,6 +373,8 @@ function LoginInner() {
                 </button>
               </div>
             </form>
+          )}
+          </>
           )}
         </div>
 
