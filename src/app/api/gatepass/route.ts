@@ -35,7 +35,18 @@ export async function POST(req: NextRequest) {
     semester: session.semester,
     section: session.section,
   });
-  const flow: "academic" | "free_period" = slot && !slot.isBreak ? "academic" : "free_period";
+
+  let flow: "academic" | "free_period" | "emergency" =
+    slot && !slot.isBreak ? "academic" : "free_period";
+
+  if (body.targetRoute === "mentor") {
+    flow = "academic";
+  } else if (body.targetRoute === "hod") {
+    flow = "free_period";
+  } else if (body.targetRoute === "emergency") {
+    flow = "emergency";
+  }
+
   const status = flow === "academic" ? "pending_mentor" : "pending_hod";
   const passId = `GP-${new Date().getFullYear()}-${nanoid(8).toUpperCase()}`;
 
@@ -98,6 +109,7 @@ export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const scope = req.nextUrl.searchParams.get("scope") || "mine";
+  const allDept = req.nextUrl.searchParams.get("all") === "true";
 
   // 1. Try DB if configured
   if (isDatabaseConfigured || process.env.NODE_ENV !== "production") {
@@ -111,69 +123,16 @@ export async function GET(req: NextRequest) {
           .orderBy(desc(gatePasses.requestTimestamp));
         return NextResponse.json({ passes: rows });
       }
-    if (scope === "mentor") {
-      if (session.role !== "mentor" && session.role !== "admin" && session.role !== "hod") {
-        return NextResponse.json({ error: "forbidden" }, { status: 403 });
-      }
-      const conds = [eq(gatePasses.status, "pending_mentor")];
-      if (session.role === "mentor" || session.role === "hod") {
-        conds.push(eq(gatePasses.department, session.department || ""));
-        if (session.semester) conds.push(eq(gatePasses.semester, session.semester));
-        if (session.section) conds.push(eq(gatePasses.section, session.section));
-      }
-      const rows = await db
-        .select()
-        .from(gatePasses)
-        .where(and(...conds))
-        .orderBy(desc(gatePasses.requestTimestamp));
-      return NextResponse.json({ passes: rows });
-    }
-    if (scope === "hod") {
-      if (session.role !== "hod" && session.role !== "admin") {
-        return NextResponse.json({ error: "forbidden" }, { status: 403 });
-      }
-      const conds = [eq(gatePasses.status, "pending_hod")];
-      if (session.role === "hod" && session.department) {
-        conds.push(eq(gatePasses.department, session.department));
-      }
-      const rows = await db
-        .select()
-        .from(gatePasses)
-        .where(and(...conds))
-        .orderBy(desc(gatePasses.requestTimestamp));
-      return NextResponse.json({ passes: rows });
-    }
-    if (scope === "security") {
-      if (session.role !== "security" && session.role !== "admin") {
-        return NextResponse.json({ error: "forbidden" }, { status: 403 });
-      }
-      const rows = await db
-        .select()
-        .from(gatePasses)
-        .where(eq(gatePasses.status, "approved"))
-        .orderBy(desc(gatePasses.requestTimestamp));
-      return NextResponse.json({ passes: rows });
-    }
-    if (scope === "history") {
-      if (session.role === "mentor" || session.role === "hod" || session.role === "admin") {
-        const conds = [];
-        conds.push(eq(gatePasses.status, "approved"));
-        if (session.role !== "admin" && session.department) {
+      if (scope === "mentor") {
+        if (session.role !== "mentor" && session.role !== "admin" && session.role !== "hod") {
+          return NextResponse.json({ error: "forbidden" }, { status: 403 });
+        }
+        const conds = [eq(gatePasses.status, "pending_mentor")];
+        if (session.role === "mentor" && !allDept && session.department) {
+          conds.push(eq(gatePasses.department, session.department));
+        } else if (session.role === "hod" && session.department) {
           conds.push(eq(gatePasses.department, session.department));
         }
-        const approved = await db
-          .select()
-          .from(gatePasses)
-          .where(and(...conds))
-          .orderBy(desc(gatePasses.requestTimestamp));
-        return NextResponse.json({ passes: approved });
-      }
-      return NextResponse.json({ passes: [] });
-    }
-    if (scope === "acted") {
-      if (session.role === "mentor" || session.role === "admin") {
-        const conds = [eq(gatePasses.mentorName, session.name)];
-        if (session.department) conds.push(eq(gatePasses.department, session.department));
         const rows = await db
           .select()
           .from(gatePasses)
@@ -181,9 +140,14 @@ export async function GET(req: NextRequest) {
           .orderBy(desc(gatePasses.requestTimestamp));
         return NextResponse.json({ passes: rows });
       }
-      if (session.role === "hod") {
-        const conds = [eq(gatePasses.hodName, session.name)];
-        if (session.department) conds.push(eq(gatePasses.department, session.department));
+      if (scope === "hod") {
+        if (session.role !== "hod" && session.role !== "admin") {
+          return NextResponse.json({ error: "forbidden" }, { status: 403 });
+        }
+        const conds = [eq(gatePasses.status, "pending_hod")];
+        if (session.role === "hod" && session.department) {
+          conds.push(eq(gatePasses.department, session.department));
+        }
         const rows = await db
           .select()
           .from(gatePasses)
@@ -191,11 +155,59 @@ export async function GET(req: NextRequest) {
           .orderBy(desc(gatePasses.requestTimestamp));
         return NextResponse.json({ passes: rows });
       }
+      if (scope === "security") {
+        if (session.role !== "security" && session.role !== "admin") {
+          return NextResponse.json({ error: "forbidden" }, { status: 403 });
+        }
+        const rows = await db
+          .select()
+          .from(gatePasses)
+          .where(eq(gatePasses.status, "approved"))
+          .orderBy(desc(gatePasses.requestTimestamp));
+        return NextResponse.json({ passes: rows });
+      }
+      if (scope === "history") {
+        if (session.role === "mentor" || session.role === "hod" || session.role === "admin") {
+          const conds = [];
+          conds.push(eq(gatePasses.status, "approved"));
+          if (session.role !== "admin" && session.department) {
+            conds.push(eq(gatePasses.department, session.department));
+          }
+          const approved = await db
+            .select()
+            .from(gatePasses)
+            .where(and(...conds))
+            .orderBy(desc(gatePasses.requestTimestamp));
+          return NextResponse.json({ passes: approved });
+        }
+        return NextResponse.json({ passes: [] });
+      }
+      if (scope === "acted") {
+        if (session.role === "mentor" || session.role === "admin") {
+          const conds = [eq(gatePasses.mentorName, session.name)];
+          if (session.department) conds.push(eq(gatePasses.department, session.department));
+          const rows = await db
+            .select()
+            .from(gatePasses)
+            .where(and(...conds))
+            .orderBy(desc(gatePasses.requestTimestamp));
+          return NextResponse.json({ passes: rows });
+        }
+        if (session.role === "hod") {
+          const conds = [eq(gatePasses.hodName, session.name)];
+          if (session.department) conds.push(eq(gatePasses.department, session.department));
+          const rows = await db
+            .select()
+            .from(gatePasses)
+            .where(and(...conds))
+            .orderBy(desc(gatePasses.requestTimestamp));
+          return NextResponse.json({ passes: rows });
+        }
+      }
+    } catch (err) {
+      console.warn("[GatePass GET DB Notice] Using memory store fallback.", err);
     }
-  } catch (err) {
-    console.warn("[GatePass GET DB Notice] Using memory store fallback.", err);
   }
-}
 
   // 2. Fallback to mockStore
   if (scope === "mine") {
@@ -211,10 +223,8 @@ export async function GET(req: NextRequest) {
     }
     const passes = mockStore.gatePasses.filter((p) => {
       if (p.status !== "pending_mentor") return false;
-      if (session.role === "mentor" || session.role === "hod") {
-        if (session.department && p.department.toLowerCase() !== session.department.toLowerCase()) return false;
-        if (session.semester && p.semester !== session.semester) return false;
-        if (session.section && p.section.toLowerCase() !== session.section.toLowerCase()) return false;
+      if (session.role === "mentor" && !allDept && session.department) {
+        if (p.department.toLowerCase() !== session.department.toLowerCase()) return false;
       }
       return true;
     });

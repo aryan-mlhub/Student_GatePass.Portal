@@ -35,6 +35,7 @@ function Inner() {
   const router = useRouter();
   const { user } = useSession();
   const [reason, setReason] = useState("");
+  const [targetRoute, setTargetRoute] = useState<"auto" | "mentor" | "hod">("auto");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -72,7 +73,7 @@ function Inner() {
       const r = await fetch("/api/gatepass", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason, targetRoute }),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "Failed to create pass");
@@ -147,24 +148,71 @@ function Inner() {
         {preview && (
           <div className="mt-5 rounded-xl bg-slate-900 p-4 text-slate-100">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Smart routing
+              Smart routing destination
             </div>
             <div className="mt-1 text-sm">
-              {preview.summary}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-slate-400">Approval will route to:</span>
-              {preview.requiresMentor ? (
-                <span className="badge badge-amber">Mentor first</span>
-              ) : (
-                <span className="badge badge-slate">Mentor skipped</span>
-              )}
-              {preview.requiresHod && (
-                <span className="badge badge-indigo">Then HOD</span>
-              )}
+              {targetRoute === "mentor"
+                ? "Academic leave: will route directly to Mentor (Prof. Fifth A Mentor) first, then forward to HOD."
+                : targetRoute === "hod"
+                  ? "Free-period / Fast-track: will route directly to HOD (Dr. CSE HOD) for instant signoff."
+                  : preview.summary}
             </div>
           </div>
         )}
+      </div>
+
+      {/* Route Target Selector */}
+      <div className="card p-6">
+        <div className="section-title">Approval destination</div>
+        <h2 className="mt-1 text-base font-bold text-slate-900">
+          Where should this pass be sent?
+        </h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => setTargetRoute("auto")}
+            className={`p-3.5 rounded-xl border text-left transition ${
+              targetRoute === "auto"
+                ? "border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/20"
+                : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
+            }`}
+          >
+            <div className="text-xs font-bold text-slate-900">🎯 Timetable Auto</div>
+            <div className="text-[11px] text-slate-500 mt-1">
+              Checks live timetable to decide Mentor vs HOD
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTargetRoute("mentor")}
+            className={`p-3.5 rounded-xl border text-left transition ${
+              targetRoute === "mentor"
+                ? "border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/20"
+                : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
+            }`}
+          >
+            <div className="text-xs font-bold text-amber-900">👨‍🏫 Send to Mentor</div>
+            <div className="text-[11px] text-slate-500 mt-1">
+              For leaving ongoing class (Mentor $\rightarrow$ HOD)
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTargetRoute("hod")}
+            className={`p-3.5 rounded-xl border text-left transition ${
+              targetRoute === "hod"
+                ? "border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-500/20"
+                : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
+            }`}
+          >
+            <div className="text-xs font-bold text-indigo-900">🏛️ Send to HOD</div>
+            <div className="text-[11px] text-slate-500 mt-1">
+              Direct HOD approval (Free period / Fast track)
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Reason */}

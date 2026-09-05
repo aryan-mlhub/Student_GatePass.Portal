@@ -38,12 +38,16 @@ function Inner() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<number | null>(null);
   const [comments, setComments] = useState<Record<string, string>>({});
+  const [showAllDept, setShowAllDept] = useState(true);
 
   async function refresh() {
-    const r = await fetch("/api/gatepass?scope=mentor");
+    const url = showAllDept
+      ? "/api/gatepass?scope=mentor&all=true"
+      : "/api/gatepass?scope=mentor";
+    const r = await fetch(url);
     if (r.ok) {
       const data = await r.json();
-      setPending(data.passes);
+      setPending(data.passes || []);
     }
     setLoading(false);
   }
@@ -52,7 +56,7 @@ function Inner() {
     refresh();
     const t = setInterval(refresh, 15000);
     return () => clearInterval(t);
-  }, []);
+  }, [showAllDept]);
 
   async function decide(pass: Pass, action: "approve_mentor" | "reject") {
     setActing(pass.id);

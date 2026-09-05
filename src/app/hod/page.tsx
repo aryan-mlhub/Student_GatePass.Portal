@@ -46,7 +46,7 @@ function Inner() {
     const r = await fetch("/api/gatepass?scope=hod");
     if (r.ok) {
       const data = await r.json();
-      setPending(data.passes);
+      setPending(data.passes || []);
     }
     setLoading(false);
   }

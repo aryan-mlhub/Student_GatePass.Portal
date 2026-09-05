@@ -105,6 +105,44 @@ function Inner() {
             hour12: true,
           })}
         </p>
+
+        {/* Dynamic routing helper banner */}
+        {p.status === "pending_mentor" && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-amber-950">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800">
+              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              Stage 1 of 2: Awaiting Mentor Approval
+            </div>
+            <p className="mt-1 text-xs text-amber-800 leading-relaxed">
+              This request is currently in the <strong>Mentor</strong> queue for {p.department} (Sem {p.semester}-{p.section}).
+              To review or approve, sign in as mentor: <code className="bg-white/80 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold text-amber-900">mentor_cse_5_a</code> (Password: <code className="font-mono">mentor123</code>).
+            </p>
+          </div>
+        )}
+
+        {p.status === "pending_hod" && (
+          <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 text-indigo-950">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-800">
+              <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+              Final Stage: Awaiting HOD Final Approval
+            </div>
+            <p className="mt-1 text-xs text-indigo-800 leading-relaxed">
+              This request is currently in the <strong>HOD</strong> queue for {p.department}.
+              To review or give final signoff, sign in as HOD: <code className="bg-white/80 border border-indigo-200 px-1.5 py-0.5 rounded font-mono font-bold text-indigo-900">hod_cse</code> (Password: <code className="font-mono">hod123</code>) or <code className="font-mono">admin</code>.
+            </p>
+          </div>
+        )}
+
+        {p.status === "approved" && (
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-950">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800">
+              ✓ Approved & Active
+            </div>
+            <p className="mt-1 text-xs text-emerald-800 leading-relaxed">
+              Your gate pass has been approved by HOD. Show the signed QR code to the Security Guard at the gate.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
